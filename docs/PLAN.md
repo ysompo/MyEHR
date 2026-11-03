@@ -10,7 +10,8 @@ A personal medical file for me and my family, built from our own Meuhedet accoun
 Data stays **only on the device**. There is no server, no tracking and no ads.
 
 ## Users
-Family members. Each person logs in with **their own** Meuhedet account (ID + SMS, to confirm).
+Family members. Adults log in with **their own** Meuhedet account (ID + SMS, to confirm).
+A parent also sees their **children** through the parent's own login, using the site's family switcher (to confirm in the recording). Each person gets a separate profile in the app.
 
 ## Platforms
 | Platform | Form | Install |
