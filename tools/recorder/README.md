@@ -22,7 +22,7 @@ Records **which data requests** the Meuhedet site makes and the **shape** of eac
    - documents/letters, plus **opening one PDF**
    - visits/summaries, referrals, approvals (התחייבויות), vaccines, imaging, diagnoses/sensitivities
    - appointments
-   - **children:** `MR.note("switch to child")`, switch to a child in the family switcher, then open the child's lab results, medications and documents (labelled `MR.note("child lab results")` etc.)
+   - **children:** `MR.note("switch to child")`, switch to each family member via the family link (`MR.note("switch to wife")`, `MR.note("switch to child")`), then open their's lab results, medications and documents (labelled `MR.note("child lab results")` etc.)
 5. **If the page fully reloads** (the console clears), paste `recorder.js` again. The log continues.
 6. If the site moves to a different address (for example `my.meuhedet.co.il`), run the recorder there too, and run `MR.export()` on each address.
 7. Run `MR.export()`. A file `meuhedet-map-<site>.json` downloads.

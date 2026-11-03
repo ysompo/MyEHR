@@ -5,8 +5,8 @@ A personal medical file for me and my family, pulled from our Meuhedet accounts.
 Data stays **only on the phone**. There is no server, no tracking and no ads.
 
 ## Users
-- Adults log in with their own Meuhedet account.
-- A parent sees their **children** through the parent's login, using the site's family switcher (to confirm in the recording).
+- **One login** (any family member) is enough: Meuhedet's family link shows spouse and children from the same account.
+- After login the app pulls each family member in turn through the family link.
 - Each person gets a separate profile in the app.
 
 ## Tech
