@@ -145,14 +145,70 @@ object UiPrefs {
     fun setTextSize(c: Context, t: TextSize) = prefs(c).edit().putString("text_size", t.name).apply()
 }
 
+/** A complete look: colors (light + dark) and card roundness. */
+class Look(val name: String, val light: ColorScheme, val dark: ColorScheme, val lightStatus: StatusColors, val darkStatus: StatusColors, val cardRadius: Int)
+
+val PineLook = Look("אורן", Light, Dark, LightStatus, DarkStatus, 20)
+
+val OceanLook = Look(
+    "ים",
+    lightColorScheme(
+        primary = Color(0xFF24476B), onPrimary = Color.White, primaryContainer = Color(0xFFDCE7F2), onPrimaryContainer = Color(0xFF0F2740),
+        secondary = Color(0xFFE07A5F), onSecondary = Color.White, secondaryContainer = Color(0xFFFBE3DB), onSecondaryContainer = Color(0xFF5A2213),
+        background = Color(0xFFF6F7F5), onBackground = Color(0xFF1F2328), surface = Color(0xFFF6F7F5), onSurface = Color(0xFF1F2328),
+        surfaceVariant = Color(0xFFE8ECEE), onSurfaceVariant = Color(0xFF5B636B),
+        surfaceContainerLowest = Color.White, surfaceContainerLow = Color.White, surfaceContainer = Color.White,
+        surfaceContainerHigh = Color(0xFFE8ECEE), surfaceContainerHighest = Color(0xFFE8ECEE),
+        outline = Color(0xFFDDE2E6), outlineVariant = Color(0xFFDDE2E6), error = Color(0xFFB3261E),
+    ),
+    darkColorScheme(
+        primary = Color(0xFF9CC2E8), onPrimary = Color(0xFF0B2236), primaryContainer = Color(0xFF213A55), onPrimaryContainer = Color(0xFFD6E6F7),
+        secondary = Color(0xFFF2A58F), onSecondary = Color(0xFF3B140A), secondaryContainer = Color(0xFF4D2A20), onSecondaryContainer = Color(0xFFFFDDD2),
+        background = Color(0xFF15181C), onBackground = Color(0xFFE8EBEE), surface = Color(0xFF15181C), onSurface = Color(0xFFE8EBEE),
+        surfaceVariant = Color(0xFF262B31), onSurfaceVariant = Color(0xFFA9B1B9),
+        surfaceContainerLowest = Color(0xFF1E2227), surfaceContainerLow = Color(0xFF1E2227), surfaceContainer = Color(0xFF1E2227),
+        surfaceContainerHigh = Color(0xFF262B31), surfaceContainerHighest = Color(0xFF262B31),
+        outline = Color(0xFF343A41), outlineVariant = Color(0xFF343A41), error = Color(0xFFF2B8B5),
+    ),
+    StatusColors(Color(0xFFB3261E), Color(0xFFF9DEDC), Color(0xFF2E7D5B), Color(0xFFDDEFE6), Color(0xFFE07A5F), Color(0xFFFBE3DB), Color(0xFF5B636B)),
+    StatusColors(Color(0xFFF2B8B5), Color(0xFF4A1F1D), Color(0xFF8FD1B2), Color(0xFF1E3A2E), Color(0xFFF2A58F), Color(0xFF4D2A20), Color(0xFFA9B1B9)),
+    14,
+)
+
+val OliveLook = Look(
+    "זית",
+    lightColorScheme(
+        primary = Color(0xFF55672F), onPrimary = Color.White, primaryContainer = Color(0xFFE4EAD2), onPrimaryContainer = Color(0xFF243012),
+        secondary = Color(0xFFC8693F), onSecondary = Color.White, secondaryContainer = Color(0xFFF7DFD2), onSecondaryContainer = Color(0xFF52240F),
+        background = Color(0xFFFAF5EC), onBackground = Color(0xFF2A2620), surface = Color(0xFFFAF5EC), onSurface = Color(0xFF2A2620),
+        surfaceVariant = Color(0xFFEFE7D8), onSurfaceVariant = Color(0xFF6A6254),
+        surfaceContainerLowest = Color(0xFFFFFCF6), surfaceContainerLow = Color(0xFFFFFCF6), surfaceContainer = Color(0xFFFFFCF6),
+        surfaceContainerHigh = Color(0xFFEFE7D8), surfaceContainerHighest = Color(0xFFEFE7D8),
+        outline = Color(0xFFE6DCC9), outlineVariant = Color(0xFFE6DCC9), error = Color(0xFFA8322A),
+    ),
+    darkColorScheme(
+        primary = Color(0xFFBFCF94), onPrimary = Color(0xFF1E2809), primaryContainer = Color(0xFF34401C), onPrimaryContainer = Color(0xFFE2EBC6),
+        secondary = Color(0xFFEFA07D), onSecondary = Color(0xFF3E1806), secondaryContainer = Color(0xFF4F2A18), onSecondaryContainer = Color(0xFFFFDCCB),
+        background = Color(0xFF1A1914), onBackground = Color(0xFFEEE9DE), surface = Color(0xFF1A1914), onSurface = Color(0xFFEEE9DE),
+        surfaceVariant = Color(0xFF302D25), onSurfaceVariant = Color(0xFFB4AD9F),
+        surfaceContainerLowest = Color(0xFF24221C), surfaceContainerLow = Color(0xFF24221C), surfaceContainer = Color(0xFF24221C),
+        surfaceContainerHigh = Color(0xFF302D25), surfaceContainerHighest = Color(0xFF302D25),
+        outline = Color(0xFF3F3B31), outlineVariant = Color(0xFF3F3B31), error = Color(0xFFF0A49A),
+    ),
+    StatusColors(Color(0xFFA8322A), Color(0xFFF6DAD6), Color(0xFF55672F), Color(0xFFE4EAD2), Color(0xFFC8693F), Color(0xFFF7DFD2), Color(0xFF6A6254)),
+    StatusColors(Color(0xFFF0A49A), Color(0xFF4A231E), Color(0xFFBFCF94), Color(0xFF34401C), Color(0xFFEFA07D), Color(0xFF4F2A18), Color(0xFFB4AD9F)),
+    28,
+)
+
 @Composable
-fun MyEhrTheme(textSize: TextSize = TextSize.NORMAL, dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+fun MyEhrTheme(textSize: TextSize = TextSize.NORMAL, dark: Boolean = isSystemInDarkTheme(), look: Look = PineLook, content: @Composable () -> Unit) {
     val d = LocalDensity.current
     CompositionLocalProvider(
         LocalLayoutDirection provides LayoutDirection.Rtl,
         LocalDensity provides Density(d.density, d.fontScale * textSize.scale),
-        LocalStatus provides if (dark) DarkStatus else LightStatus,
+        LocalStatus provides if (dark) look.darkStatus else look.lightStatus,
     ) {
-        MaterialTheme(colorScheme = if (dark) Dark else Light, typography = Type, shapes = Shape, content = content)
+        val shapes = Shape.copy(medium = RoundedCornerShape(look.cardRadius.dp), large = RoundedCornerShape((look.cardRadius + 8).dp))
+        MaterialTheme(colorScheme = if (dark) look.dark else look.light, typography = Type, shapes = shapes, content = content)
     }
 }

@@ -23,6 +23,10 @@ import com.myehr.app.ui.LabSeriesScreen
 import com.myehr.app.ui.LabsScreen
 import com.myehr.app.ui.LockScreen
 import com.myehr.app.ui.MyEhrTheme
+import com.myehr.app.ui.Look
+import com.myehr.app.ui.PineLook
+import com.myehr.app.ui.OceanLook
+import com.myehr.app.ui.OliveLook
 import com.myehr.app.ui.SettingsScreen
 import com.myehr.app.ui.SubHeader
 import com.myehr.app.ui.Tab
@@ -71,8 +75,15 @@ class DemoScreens {
         }
     }
 
-    private fun shot(name: String, dark: Boolean = false, size: TextSize = TextSize.NORMAL, content: @Composable () -> Unit) =
-        captureRoboImage("build/demo/$name.png") { MyEhrTheme(size, dark) { content() } }
+    private fun shot(name: String, dark: Boolean = false, size: TextSize = TextSize.NORMAL, look: Look = PineLook, content: @Composable () -> Unit) =
+        captureRoboImage("build/demo/$name.png") { MyEhrTheme(size, dark, look) { content() } }
+
+    @Test fun opt_1_pine() = shot("opt_1_pine") { Screen { dash() } }
+    @Test fun opt_2_ocean() = shot("opt_2_ocean", look = OceanLook) { Screen { dash() } }
+    @Test fun opt_3_olive() = shot("opt_3_olive", look = OliveLook) { Screen { dash() } }
+    @Test fun opt_1_pine_trend() = shot("opt_1_pine_trend") { Screen(null) { LabSeriesScreen(all[2], data.meds) } }
+    @Test fun opt_2_ocean_trend() = shot("opt_2_ocean_trend", look = OceanLook) { Screen(null) { LabSeriesScreen(all[2], data.meds) } }
+    @Test fun opt_3_olive_trend() = shot("opt_3_olive_trend", look = OliveLook) { Screen(null) { LabSeriesScreen(all[2], data.meds) } }
 
     private val dash: @Composable () -> Unit = { Dashboard(data, {}, {}, {}, {}, {}) }
 
