@@ -1,6 +1,5 @@
 package com.myehr.app.ui
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,13 +32,11 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.myehr.app.R
 import com.myehr.app.data.LabPoint
 import com.myehr.app.data.LabSeries
 
@@ -59,21 +56,21 @@ fun StatusPill(status: Status, modifier: Modifier = Modifier) {
     if (status == Status.NONE) return
     val s = LocalStatus.current
     val (fg, bg, word, icon) = when (status) {
-        Status.HIGH -> Quad(s.high, s.highBg, "גבוה", R.drawable.ic_arrow_up)
-        Status.LOW -> Quad(s.high, s.highBg, "נמוך", R.drawable.ic_arrow_down)
-        else -> Quad(s.ok, s.okBg, "תקין", R.drawable.ic_check)
+        Status.HIGH -> Quad(s.high, s.highBg, "גבוה", Ic.ARROW_UP)
+        Status.LOW -> Quad(s.high, s.highBg, "נמוך", Ic.ARROW_DOWN)
+        else -> Quad(s.ok, s.okBg, "תקין", Ic.CHECK)
     }
     Row(
         modifier.clip(CircleShape).background(bg).padding(horizontal = 10.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(painterResource(icon), null, tint = fg, modifier = Modifier.size(14.dp))
+        Icon(LocalPlatform.current.icon(icon), null, tint = fg, modifier = Modifier.size(14.dp))
         Spacer(Modifier.width(4.dp))
         Text(word, color = fg, style = MaterialTheme.typography.labelMedium)
     }
 }
 
-private data class Quad(val fg: Color, val bg: Color, val word: String, @DrawableRes val icon: Int)
+private data class Quad(val fg: Color, val bg: Color, val word: String, val icon: Ic)
 
 // ---------- sparkline ----------
 /** Tiny trend line. Time runs left→right; the last point is emphasized. */
@@ -169,8 +166,8 @@ fun Avatar(name: String, selected: Boolean, index: Int = 0, size: Dp = 40.dp) {
 }
 
 @Composable
-fun AppIcon(@DrawableRes id: Int, description: String?, modifier: Modifier = Modifier, tint: Color = MaterialTheme.colorScheme.onSurface) =
-    Icon(painterResource(id), description, modifier = modifier.size(24.dp), tint = tint)
+fun AppIcon(icon: Ic, description: String?, modifier: Modifier = Modifier, tint: Color = MaterialTheme.colorScheme.onSurface) =
+    Icon(LocalPlatform.current.icon(icon), description, modifier = modifier.size(24.dp), tint = tint)
 
 @Composable
 fun ValueText(value: String, unit: String?, status: Status = Status.NONE, big: Boolean = false) {

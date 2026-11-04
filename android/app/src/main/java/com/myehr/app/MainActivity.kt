@@ -20,7 +20,8 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.myehr.app.ui.App
 import com.myehr.app.ui.MyEhrTheme
-import com.myehr.app.ui.UiPrefs
+import com.myehr.app.ui.LocalPlatform
+import com.myehr.app.ui.PlatformFonts
 import androidx.compose.runtime.remember
 import com.myehr.app.ui.LockScreen
 
@@ -32,9 +33,12 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         // No screenshots, and hidden in the recent-apps preview.
         window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        PlatformFonts.family = AndroidPlatform.rubik
+        val platform = AndroidPlatform(applicationContext)
         setContent {
             val textSize = remember { mutableStateOf(UiPrefs.textSize(this)) }
             val look = remember { mutableStateOf(UiPrefs.look(this)) }
+            androidx.compose.runtime.CompositionLocalProvider(LocalPlatform provides platform) {
             MyEhrTheme(textSize.value, look = look.value) {
                 run {
                     // The app stays composed under the lock screen, so a login in progress
@@ -44,6 +48,7 @@ class MainActivity : FragmentActivity() {
                         if (!unlocked.value) Surface(Modifier.fillMaxSize()) { LockScreen(lockMessage.value) { authenticate() } } // M3 Surface blocks touches
                     }
                 }
+            }
             }
         }
     }

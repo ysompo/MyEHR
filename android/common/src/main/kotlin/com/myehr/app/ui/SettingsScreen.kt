@@ -63,7 +63,7 @@ fun SettingsScreen(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Loo
         }
 
         SectionTitle("עדכונים")
-        com.myehr.app.update.UpdateSection()
+        LocalPlatform.current.UpdateSection()
 
         SectionTitle("פרטיות")
         SoftCard(Modifier.fillMaxWidth().padding(horizontal = Space.l)) {
@@ -75,7 +75,7 @@ fun SettingsScreen(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Loo
 @Composable
 fun SubHeader(title: String, onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = Space.s, vertical = Space.s), verticalAlignment = Alignment.CenterVertically) {
-        androidx.compose.material3.IconButton(onClick = onBack) { AppIcon(com.myehr.app.R.drawable.ic_back, "חזרה") }
+        androidx.compose.material3.IconButton(onClick = onBack) { AppIcon(Ic.BACK, "חזרה") }
         Text(title, style = MaterialTheme.typography.titleLarge)
     }
 }

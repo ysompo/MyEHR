@@ -1,6 +1,5 @@
 package com.myehr.app.ui
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -20,24 +19,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import com.myehr.app.R
 import com.myehr.app.ai.AskScreen
 import com.myehr.app.data.Person
 import com.myehr.app.data.Repo
-import com.myehr.app.data.Secrets
-import com.myehr.app.data.Store
-import com.myehr.app.sync.SyncScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-enum class Tab(val label: String, val icon: Int) {
-    HOME("בית", R.drawable.ic_home),
-    LABS("בדיקות", R.drawable.ic_lab),
-    ASK("שאלה", R.drawable.ic_ask),
-    MEDS("תרופות", R.drawable.ic_pill),
-    VISITS("ביקורים", R.drawable.ic_calendar),
-    DOCS("מסמכים", R.drawable.ic_doc),
+enum class Tab(val label: String, val icon: Ic) {
+    HOME("בית", Ic.HOME),
+    LABS("בדיקות", Ic.LAB),
+    ASK("שאלה", Ic.ASK),
+    MEDS("תרופות", Ic.PILL),
+    VISITS("ביקורים", Ic.CALENDAR),
+    DOCS("מסמכים", Ic.DOC),
 }
 
 private sealed interface Sub {
@@ -70,9 +64,9 @@ fun BottomBar(tab: Tab, onTab: (Tab) -> Unit) {
 
 @Composable
 fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLook, onLook: (Look) -> Unit = {}) {
-    val context = LocalContext.current
-    val repo = remember { Repo(Store.get(context)) }
-    val secrets = remember { Secrets(context) }
+    val platform = LocalPlatform.current
+    val repo = platform.repo
+    val secrets = platform.secrets
     var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
     var sub by remember { mutableStateOf<Sub?>(null) }
     var refresh by remember { mutableIntStateOf(0) }
@@ -83,14 +77,10 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
     var personId by rememberSaveable { mutableStateOf<String?>(null) }
     val person = people.firstOrNull { it.id == personId } ?: people.firstOrNull()
 
-    // Once a day: is there a newer signed build?
-    var update by remember { mutableStateOf<com.myehr.app.update.UpdateInfo?>(null) }
-    androidx.compose.runtime.LaunchedEffect(Unit) { update = com.myehr.app.update.Updater.dailyCheck(context) }
-
     val syncStatus by com.myehr.app.sync.SyncState.status.collectAsState()
     androidx.compose.runtime.LaunchedEffect(syncStatus.finishedAt) { if (syncStatus.finishedAt > 0) refresh++ }
 
-    BackHandler(enabled = sub != null || tab != Tab.HOME) { if (sub != null) sub = null else tab = Tab.HOME }
+    platform.BackHandler(enabled = sub != null || tab != Tab.HOME) { if (sub != null) sub = null else tab = Tab.HOME }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -98,7 +88,7 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             when (val s = sub) {
-                Sub.Sync -> { SubHeader("סנכרון ממאוחדת") { sub = null }; SyncScreen(onDone = { refresh++; sub = null }) }
+                Sub.Sync -> { SubHeader("סנכרון ממאוחדת") { sub = null }; platform.SyncContent(onDone = { refresh++; sub = null }) }
                 Sub.Settings -> { SubHeader("הגדרות") { sub = null }; SettingsScreen(textSize, onTextSize, look, onLook, hasKey) { secrets.apiKey = null; hasKey = false } }
                 is Sub.LabVisitDetail -> { SubHeader("תוצאות בדיקה") { sub = null }; LabDetailScreen(load(null, s, person?.id) { person?.let { repo.labDetail(it.id, s.stickerId) } }) }
                 is Sub.LabHistory -> { SubHeader("מגמה לאורך זמן") { sub = null }; LabSeriesScreen(load(null, s, person?.id) { person?.let { repo.series(it.id, s.code) } }, load(emptyList(), person?.id) { person?.let { repo.aiData(it.id).medications() } ?: emptyList() }) }
@@ -110,7 +100,7 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
                     val id = person.id
                     when (tab) {
                         Tab.HOME -> {
-                            update?.let { u -> com.myehr.app.update.UpdateBanner(u) { update = null } }
+                            platform.UpdateBanner()
                             val d = load(null, id, refresh) { repo.dashboard(people, person) }
                             if (d != null) Dashboard(d, onPerson = { personId = it }, onAsk = { askPrefill = it; tab = Tab.ASK },
                                 onSeries = { sub = Sub.LabHistory(it) }, onSync = { sub = Sub.Sync }, onSettings = { sub = Sub.Settings })
@@ -130,10 +120,11 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
 
 @Composable
 fun Welcome(onSync: () -> Unit) {
+    val platform = LocalPlatform.current
     Column(Modifier.padding(Space.xl)) {
         Text("MyEHR", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
         Gap(Space.m)
-        Text("התיק הרפואי של המשפחה, בטלפון שלכם בלבד.", style = MaterialTheme.typography.titleMedium)
+        Text("התיק הרפואי של המשפחה, ${platform.deviceWord} שלכם בלבד.", style = MaterialTheme.typography.titleMedium)
         Gap(Space.s)
         Text("התחברו לאתר מאוחדת פעם אחת, והבדיקות, התרופות והמסמכים יישמרו כאן מוצפנים.", style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant)

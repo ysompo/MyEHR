@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.myehr.app.R
 import com.myehr.app.ai.MedSummary
 import com.myehr.app.data.LabSeries
 import com.myehr.app.data.Person
@@ -55,8 +54,8 @@ fun Dashboard(
         item {
             Row(Modifier.fillMaxWidth().padding(start = Space.xl, end = Space.s, top = Space.m), verticalAlignment = Alignment.CenterVertically) {
                 Text("MyEHR", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
-                IconButton(onClick = onSync) { AppIcon(R.drawable.ic_sync, "סנכרון") }
-                IconButton(onClick = onSettings) { AppIcon(R.drawable.ic_settings, "הגדרות") }
+                IconButton(onClick = onSync) { AppIcon(Ic.SYNC, "סנכרון") }
+                IconButton(onClick = onSettings) { AppIcon(Ic.SETTINGS, "הגדרות") }
             }
         }
         // Greeting
@@ -97,7 +96,7 @@ fun Dashboard(
                         modifier = Modifier.fillMaxWidth().clickable { onAsk(null) },
                     ) {
                         Row(Modifier.padding(horizontal = Space.l, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            AppIcon(R.drawable.ic_ask, null, tint = MaterialTheme.colorScheme.primary)
+                            AppIcon(Ic.ASK, null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(Space.m))
                             Text("שאלה על ${d.selected.name}…", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
                         }
@@ -173,7 +172,7 @@ fun Dashboard(
                         CardRow(
                             title = m.name,
                             subtitle = listOfNotNull(m.firstPurchase?.let { "מאז ${monthYear(it)}" }, if (m.permanent) "קבועה" else null).joinToString(" · "),
-                            leading = { AppIcon(R.drawable.ic_pill, null, tint = MaterialTheme.colorScheme.primary) },
+                            leading = { AppIcon(Ic.PILL, null, tint = MaterialTheme.colorScheme.primary) },
                             divider = i < d.meds.lastIndex,
                         )
                     }

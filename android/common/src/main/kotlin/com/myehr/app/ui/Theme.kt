@@ -1,6 +1,5 @@
 package com.myehr.app.ui
 
-import android.content.Context
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
@@ -17,15 +16,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.myehr.app.R
 
 /*
  * MyEHR design tokens.
@@ -103,25 +99,21 @@ private val Dark: ColorScheme = darkColorScheme(
 )
 
 // ---------- type ----------
-@OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
-private fun rubik(w: Int) = Font(R.font.rubik_var, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
-val Rubik = FontFamily(rubik(400), rubik(500), rubik(600), rubik(700))
+private fun style(f: FontFamily, size: Int, line: Int, weight: Int) = TextStyle(fontFamily = f, fontWeight = FontWeight(weight), fontSize = size.sp, lineHeight = line.sp)
 
-private fun style(size: Int, line: Int, weight: Int) = TextStyle(fontFamily = Rubik, fontWeight = FontWeight(weight), fontSize = size.sp, lineHeight = line.sp)
-
-/** Generous line heights: Hebrew with niqqud-free text still reads better a bit looser, and it helps older eyes. */
-private val Type = Typography(
-    displaySmall = style(34, 42, 600),       // big numbers on cards
-    headlineSmall = style(24, 32, 600),
-    titleLarge = style(21, 28, 600),
-    titleMedium = style(17, 24, 600),
-    titleSmall = style(15, 22, 600),
-    bodyLarge = style(17, 26, 400),
-    bodyMedium = style(15, 23, 400),
-    bodySmall = style(13, 19, 400),
-    labelLarge = style(15, 20, 500),
-    labelMedium = style(13, 18, 500),
-    labelSmall = style(12, 16, 500),
+/** Generous line heights: Hebrew reads better a bit looser, and it helps older eyes. */
+private fun type(f: FontFamily) = Typography(
+    displaySmall = style(f, 34, 42, 600),       // big numbers on cards
+    headlineSmall = style(f, 24, 32, 600),
+    titleLarge = style(f, 21, 28, 600),
+    titleMedium = style(f, 17, 24, 600),
+    titleSmall = style(f, 15, 22, 600),
+    bodyLarge = style(f, 17, 26, 400),
+    bodyMedium = style(f, 15, 23, 400),
+    bodySmall = style(f, 13, 19, 400),
+    labelLarge = style(f, 15, 20, 500),
+    labelMedium = style(f, 13, 18, 500),
+    labelSmall = style(f, 12, 16, 500),
 )
 
 // ---------- shape ----------
@@ -139,13 +131,6 @@ object Space { val xs = 4.dp; val s = 8.dp; val m = 12.dp; val l = 16.dp; val xl
 // ---------- user text size (on top of the phone's own setting) ----------
 enum class TextSize(val label: String, val scale: Float) { NORMAL("רגיל", 1f), LARGE("גדול", 1.15f), XLARGE("גדול מאוד", 1.3f) }
 
-object UiPrefs {
-    private fun prefs(c: Context) = c.getSharedPreferences("myehr_ui", Context.MODE_PRIVATE)
-    fun textSize(c: Context) = runCatching { TextSize.valueOf(prefs(c).getString("text_size", null)!!) }.getOrDefault(TextSize.NORMAL)
-    fun setTextSize(c: Context, t: TextSize) = prefs(c).edit().putString("text_size", t.name).apply()
-    fun look(c: Context): Look = Looks.firstOrNull { it.name == prefs(c).getString("look", null) } ?: PineLook
-    fun setLook(c: Context, l: Look) = prefs(c).edit().putString("look", l.name).apply()
-}
 
 /** A complete look: colors (light + dark) and card roundness. */
 class Look(val name: String, val light: ColorScheme, val dark: ColorScheme, val lightStatus: StatusColors, val darkStatus: StatusColors, val cardRadius: Int)
@@ -239,6 +224,6 @@ fun MyEhrTheme(textSize: TextSize = TextSize.NORMAL, dark: Boolean = isSystemInD
         LocalStatus provides if (dark) look.darkStatus else look.lightStatus,
     ) {
         val shapes = Shape.copy(medium = RoundedCornerShape(look.cardRadius.dp), large = RoundedCornerShape((look.cardRadius + 8).dp))
-        MaterialTheme(colorScheme = if (dark) look.dark else look.light, typography = Type, shapes = shapes, content = content)
+        MaterialTheme(colorScheme = if (dark) look.dark else look.light, typography = type(PlatformFonts.family), shapes = shapes, content = content)
     }
 }

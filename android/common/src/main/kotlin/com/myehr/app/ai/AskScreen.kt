@@ -23,13 +23,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.myehr.app.data.Person
-import com.myehr.app.data.Repo
-import com.myehr.app.data.Secrets
-import com.myehr.app.data.Store
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -40,11 +36,9 @@ private class ConsentRequest(val kind: DataKind, val summary: String, val reply:
 
 @Composable
 fun AskScreen(person: Person, prefill: String? = null) {
-    val context = LocalContext.current
+    val platform = com.myehr.app.ui.LocalPlatform.current
     val scope = rememberCoroutineScope()
-    val secrets = remember { Secrets(context) }
-    val storeLazy = remember { lazy { Store.get(context) } }  // opened only when a question is sent
-    val repoLazy = remember { lazy { Repo(storeLazy.value) } }
+    val secrets = platform.secrets
 
     var hasKey by remember { mutableStateOf(secrets.apiKey != null) }
     var keyInput by remember { mutableStateOf("") }
@@ -58,7 +52,7 @@ fun AskScreen(person: Person, prefill: String? = null) {
     if (!hasKey) {
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("שאלות חופשיות נענות על ידי Claude (Anthropic). נשלחים רק מספרים, תאריכים ושמות בדיקות ותרופות, ללא שם, ת\"ז או שמות רופאים.")
-            Text("הזינו מפתח API מ-console.anthropic.com. הוא נשמר מוצפן בטלפון.", style = MaterialTheme.typography.bodySmall)
+            Text("הזינו מפתח API מ-console.anthropic.com. הוא נשמר מוצפן ${platform.deviceWord}.", style = MaterialTheme.typography.bodySmall)
             OutlinedTextField(keyInput, { keyInput = it }, label = { Text("API key") }, singleLine = true,
                 visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
             Button(onClick = { secrets.apiKey = keyInput; keyInput = ""; hasKey = secrets.apiKey != null }, enabled = keyInput.startsWith("sk-")) { Text("שמירה") }
@@ -73,7 +67,7 @@ fun AskScreen(person: Person, prefill: String? = null) {
         scope.launch {
             try {
                 val (tools, guard) = withContext(Dispatchers.IO) {
-                    repoLazy.value.let { repo -> AiTools(repo.aiData(person.id)) to Guard(personalStrings(repo.memberJson(person.id), repo.providerNames(person.id) + person.name)) }
+                    platform.repo.let { repo -> AiTools(repo.aiData(person.id)) to Guard(personalStrings(repo.memberJson(person.id), repo.providerNames(person.id) + person.name)) }
                 }
                 val agent = AiAgent(secrets.apiKey!!, tools, guard, beforeSend = { out ->
                     if (out.isError || secrets.consented(out.kind.name)) true
@@ -86,7 +80,7 @@ fun AskScreen(person: Person, prefill: String? = null) {
                 val a = agent.ask(q)
                 answer = a
                 sentText = agent.sent.joinToString("\n\n")
-                withContext(Dispatchers.IO) { storeLazy.value.logAi(person.id, q, sentText!!, a) }
+                withContext(Dispatchers.IO) { platform.logAi(person.id, q, sentText!!, a) }
             } catch (e: Exception) {
                 answer = "שגיאה: ${e.javaClass.simpleName}. בדקו חיבור לאינטרנט ואת מפתח ה-API."
             } finally {

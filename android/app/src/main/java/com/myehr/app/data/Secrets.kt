@@ -11,7 +11,7 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /** The Anthropic API key, encrypted with a hardware-backed Keystore key. Plus first-time consent flags. */
-class Secrets(context: Context) {
+class Secrets(context: Context) : com.myehr.app.ui.SecretStore {
     private val prefs = context.getSharedPreferences("myehr_secrets", Context.MODE_PRIVATE)
 
     private fun key(): SecretKey {
@@ -27,7 +27,7 @@ class Secrets(context: Context) {
         }.generateKey()
     }
 
-    var apiKey: String?
+    override var apiKey: String?
         get() = prefs.getString(PREF_KEY, null)?.let { stored ->
             runCatching {
                 val raw = Base64.decode(stored, Base64.NO_WRAP)
@@ -44,8 +44,8 @@ class Secrets(context: Context) {
             prefs.edit().putString(PREF_KEY, Base64.encodeToString(blob, Base64.NO_WRAP)).apply()
         }
 
-    fun consented(kind: String) = prefs.getBoolean("consent_$kind", false)
-    fun setConsented(kind: String) = prefs.edit().putBoolean("consent_$kind", true).apply()
+    override fun consented(kind: String) = prefs.getBoolean("consent_$kind", false)
+    override fun setConsented(kind: String) = prefs.edit().putBoolean("consent_$kind", true).apply()
     fun resetConsents() = prefs.edit().apply { prefs.all.keys.filter { it.startsWith("consent_") }.forEach { remove(it) } }.apply()
 
     private companion object {

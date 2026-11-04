@@ -71,7 +71,7 @@ fun LabVisitList(visits: List<LabVisit>, onOpen: (LabVisit) -> Unit) {
         items(visits, key = { it.stickerId }) { v ->
             SoftCard(Modifier.fillMaxWidth(), onClick = { onOpen(v) }) {
                 CardRow(fmtDate(v.date), listOfNotNull(v.institute, v.doctor).joinToString(" · "), divider = false,
-                    leading = { AppIcon(com.myehr.app.R.drawable.ic_lab, null, tint = MaterialTheme.colorScheme.primary) })
+                    leading = { AppIcon(Ic.LAB, null, tint = MaterialTheme.colorScheme.primary) })
             }
         }
     }

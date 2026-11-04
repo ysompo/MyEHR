@@ -20,17 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-
-/** Sync progress, shared by the service, the sync screen and the app. */
-object SyncState {
-    data class Status(val running: Boolean = false, val text: String = "", val finishedAt: Long = 0, val needsLogin: Boolean = false)
-    private val _status = MutableStateFlow(Status())
-    val status: StateFlow<Status> = _status
-    internal fun set(s: Status) { _status.value = s }
-}
 
 /**
  * Background sync: runs after the user has logged in on the Meuhedet page.

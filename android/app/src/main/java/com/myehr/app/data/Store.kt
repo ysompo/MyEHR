@@ -5,7 +5,6 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
-import com.myehr.app.sync.RawSink
 import net.zetetic.database.sqlcipher.SQLiteDatabase
 import net.zetetic.database.sqlcipher.SQLiteOpenHelper
 import java.security.KeyStore
@@ -61,7 +60,7 @@ object KeyManager {
  * Encrypted local store (SQLCipher). Raw site answers are kept as-is per person and
  * parsed when shown, so a parser fix never needs a re-sync.
  */
-class Store private constructor(context: Context) : RawSink {
+class Store private constructor(context: Context) : com.myehr.app.data.RecordStore {
     private val helper: SQLiteOpenHelper
 
     init {
@@ -86,7 +85,7 @@ class Store private constructor(context: Context) : RawSink {
         }, SQLiteDatabase.CONFLICT_REPLACE)
     }
 
-    fun people(): List<Person> = db.rawQuery("SELECT id, name, is_child, last_sync FROM person ORDER BY is_child, name", null).use { c ->
+    override fun people(): List<Person> = db.rawQuery("SELECT id, name, is_child, last_sync FROM person ORDER BY is_child, name", null).use { c ->
         buildList {
             while (c.moveToNext()) add(Person(c.getString(0), c.getString(1), c.getInt(2) == 1, if (c.isNull(3)) null else c.getLong(3)))
         }
@@ -110,7 +109,7 @@ class Store private constructor(context: Context) : RawSink {
 
     fun get(person: String, kind: String): String? = get(person, kind, "")
 
-    fun all(person: String, kind: String): Map<String, String> =
+    override fun all(person: String, kind: String): Map<String, String> =
         db.rawQuery("SELECT k, json FROM raw WHERE person=? AND kind=?", arrayOf(person, kind)).use { c ->
             buildMap { while (c.moveToNext()) put(c.getString(0), c.getString(1)) }
         }

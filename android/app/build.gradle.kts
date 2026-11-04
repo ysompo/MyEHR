@@ -41,6 +41,8 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true; buildConfig = true }
+    // Screens, data and sync logic shared with the desktop app.
+    sourceSets["main"].java.srcDir("../common/src/main/kotlin")
     packaging { resources { excludes += setOf("META-INF/*.kotlin_module", "META-INF/DEPENDENCIES", "META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/versions/9/OSGI-INF/MANIFEST.MF") } }
     testOptions {
         unitTests {

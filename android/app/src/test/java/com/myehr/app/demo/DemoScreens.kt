@@ -77,7 +77,13 @@ class DemoScreens {
     }
 
     private fun shot(name: String, dark: Boolean = false, size: TextSize = TextSize.NORMAL, look: Look = PineLook, content: @Composable () -> Unit) =
-        captureRoboImage("build/demo/$name.png") { MyEhrTheme(size, dark, look) { content() } }
+        captureRoboImage("build/demo/$name.png") {
+            com.myehr.app.ui.PlatformFonts.family = com.myehr.app.AndroidPlatform.rubik
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            androidx.compose.runtime.CompositionLocalProvider(com.myehr.app.ui.LocalPlatform provides com.myehr.app.AndroidPlatform(ctx)) {
+                MyEhrTheme(size, dark, look) { content() }
+            }
+        }
 
     @Test fun opt_1_pine() = shot("opt_1_pine") { Screen { dash() } }
     @Test fun opt_2_ocean() = shot("opt_2_ocean", look = OceanLook) { Screen { dash() } }

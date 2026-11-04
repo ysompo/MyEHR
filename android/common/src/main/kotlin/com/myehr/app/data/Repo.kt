@@ -5,7 +5,15 @@ import com.myehr.app.ai.MedSummary
 import com.myehr.app.sync.Kind
 
 /** Reads raw answers from the store and parses them for the screens. */
-class Repo(private val store: Store) {
+/** Read access to the stored raw answers (Android: SQLCipher; desktop: encrypted SQLite). */
+interface RecordStore : com.myehr.app.sync.RawSink {
+    fun people(): List<Person>
+    fun all(person: String, kind: String): Map<String, String>
+}
+
+private fun RecordStore.get(person: String, kind: String): String? = get(person, kind, "")
+
+class Repo(private val store: RecordStore) {
     fun people() = store.people()
     fun labVisits(p: String) = Parsers.labVisits(store.get(p, Kind.LAB_LIST))
     fun labDetail(p: String, stickerId: String) = Parsers.labDetail(store.get(p, Kind.LAB_DETAIL, stickerId))
