@@ -8,6 +8,7 @@ import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -37,8 +38,11 @@ class MainActivity : FragmentActivity() {
         setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 MaterialTheme {
-                    Surface(Modifier.fillMaxSize()) {
-                        if (unlocked.value) App() else LockScreen()
+                    // The app stays composed under the lock screen, so a login in progress
+                    // (e.g. while reading the SMS code in another app) isn't lost.
+                    Box(Modifier.fillMaxSize()) {
+                        Surface(Modifier.fillMaxSize()) { App() }
+                        if (!unlocked.value) Surface(Modifier.fillMaxSize()) { LockScreen() } // M3 Surface blocks touches
                     }
                 }
             }
