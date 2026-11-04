@@ -8,6 +8,19 @@ Native Kotlin + Jetpack Compose. Hebrew, right-to-left.
 - **Storage:** an encrypted database (SQLCipher). Its key is protected by the Android Keystore. No backups, no server.
 - **Screens:** lab results by test (graph with normal range, out-of-range values in red) and by date (full detail), medications, documents.
 
+## Free questions (שאלה tab)
+Ask in Hebrew or English: "what is my last hemoglobin?", "how did my cholesterol change since I started X?".
+Answered by Claude (Anthropic API, model `claude-opus-5-5`) using **your own API key**, stored encrypted on the phone.
+
+What leaves the phone is only what the question needs, fetched through 4 local tools:
+test names, values, units, normal ranges and dates, medication names with first and last purchase dates, and age.
+**Never sent:** name, ID, phone, email, birth date, doctors, labs, clinics, pharmacies, or free text such as notes.
+A guard also scrubs any of those strings, and any 8+ digit number, from every outgoing message.
+- The first time each kind of data is needed, the app shows what will be sent and asks for OK.
+- "מה נשלח ל-Claude?" under each answer shows exactly what was sent. The log is kept in the encrypted database.
+- Server-side fallback is on: if Opus 5.5 declines a question, Anthropic retries it on another Claude model.
+- Answers describe trends and timing only. They are not medical advice.
+
 ## Not yet
 - Family members (waiting for the family-switch recording).
 - Opening PDFs.

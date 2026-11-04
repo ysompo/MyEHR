@@ -1,5 +1,7 @@
 package com.myehr.app.data
 
+import com.myehr.app.ai.AiData
+import com.myehr.app.ai.MedSummary
 import com.myehr.app.sync.Kind
 
 /** Reads raw answers from the store and parses them for the screens. */
@@ -17,6 +19,34 @@ class Repo(private val store: Store) {
     fun documents(p: String) = Parsers.documents(store.get(p, Kind.DOCUMENTS))
     fun vaccines(p: String) = Parsers.vaccines(store.get(p, Kind.VACCINES))
     fun examinations(p: String) = Parsers.examinations(store.get(p, Kind.EXAMS))
+
+    fun memberJson(p: String) = Parsers.parse(store.get(p, Kind.MEMBER))
+
+    /** Doctors, labs, clinics and pharmacies in this person's records: never sent to the AI. */
+    fun providerNames(p: String): List<String?> =
+        labVisits(p).flatMap { listOf(it.doctor, it.institute) } +
+            activeMeds(p).map { it.doctor } +
+            purchases(p).flatMap { listOf(it.doctor, it.pharmacy) } +
+            prescriptions(p).map { it.doctor } +
+            documents(p).map { it.doctor } +
+            examinations(p).map { it.institute }
+
+    /** The AI's view of one person: names, values, dates. Built only from allow-listed fields. */
+    fun aiData(p: String): AiData = object : AiData {
+        override fun series() = labSeries(p)
+        override fun medications(): List<MedSummary> {
+            val bought = purchases(p).groupBy { it.name }
+            val active = activeMeds(p)
+            val names = (bought.keys + active.map { it.name } + prescriptions(p).flatMap { it.medicines }).distinct()
+            return names.map { n ->
+                val dates = bought[n].orEmpty().mapNotNull { it.date }.sorted()
+                val a = active.firstOrNull { it.name == n }
+                MedSummary(n, dates.firstOrNull(), dates.lastOrNull(), dates.size, a != null, a?.permanent ?: false)
+            }.sortedBy { it.firstPurchase ?: "9999" }
+        }
+        override fun age(): Int? = (memberJson(p) as? kotlinx.serialization.json.JsonObject)
+            ?.get("Age")?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()?.toInt() }
+    }
 }
 
 /** "2024-05-01T08:30:00" → "01/05/2024". */

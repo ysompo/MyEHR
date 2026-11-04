@@ -84,12 +84,12 @@ class DemoScreens {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { MaterialTheme { Surface(Modifier.fillMaxSize()) { LockScreen(null) {} } } }
     }
 
-    @Test fun s2_byTest() = shot("2_tests") { Frame(home = true, tab = 0) { LabSeriesList(allSeries) {} } }
+    @Test fun s2_byTest() = shot("2_tests") { Frame(home = true, tab = 1) { LabSeriesList(allSeries) {} } }
 
     @Test fun s3_graph() = shot("3_graph") { Frame(back = true) { LabSeriesScreen(allSeries[0]) } }
 
     @Test fun s4_byDate() = shot("4_by_date") {
-        Frame(home = true, tab = 1) {
+        Frame(home = true, tab = 2) {
             LabVisitList(listOf(
                 LabVisit("11", "2", "2025-08-11T08:00:00", "ד\"ר לדוגמה", "מעבדה לדוגמה"),
                 LabVisit("12", "2", "2024-06-02T08:00:00", "ד\"ר לדוגמה", "מעבדה לדוגמה"),
@@ -110,7 +110,7 @@ class DemoScreens {
     }
 
     @Test fun s6_meds() = shot("6_meds") {
-        Frame(home = true, tab = 2) {
+        Frame(home = true, tab = 3) {
             MedsScreen(
                 listOf(Medication("תרופה לדוגמה 10 מ\"ג", "ד\"ר לדוגמה", null, "2026-02-01T00:00:00", true)),
                 listOf(Prescription("1", "ד\"ר לדוגמה", "רפואת משפחה", "2025-08-11T10:00:00", null, null, listOf("תרופה לדוגמה 10 מ\"ג"))),
@@ -120,7 +120,7 @@ class DemoScreens {
     }
 
     @Test fun s7_docs() = shot("7_docs") {
-        Frame(home = true, tab = 3) {
+        Frame(home = true, tab = 4) {
             DocsScreen(
                 listOf(MedDocument("2025-07-01T09:00:00", "הפניה לרופא עיניים", "הפניה", "ד\"ר לדוגמה", "רפואת משפחה", null, null, null, null, true)),
                 listOf(Vaccine("2024-10-15T00:00:00", "שפעת עונתית")),

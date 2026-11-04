@@ -41,6 +41,7 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
+    packaging { resources { excludes += setOf("META-INF/*.kotlin_module", "META-INF/DEPENDENCIES", "META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/versions/9/OSGI-INF/MANIFEST.MF") } }
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
@@ -70,11 +71,13 @@ dependencies {
     implementation("androidx.sqlite:sqlite:2.4.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("com.anthropic:anthropic-java:3.2.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation(composeBom)
     testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     testImplementation("io.github.takahirom.roborazzi:roborazzi:1.43.1")
     testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.43.1")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

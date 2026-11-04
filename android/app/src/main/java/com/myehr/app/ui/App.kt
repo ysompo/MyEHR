@@ -14,7 +14,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -101,9 +101,10 @@ private fun Home(repo: Repo, person: Person, onVisit: (String) -> Unit, onSeries
     HomeTabs(tab) { tab = it }
     val id = person.id
     when (tab) {
-        0 -> LabSeriesList(load(emptyList(), id) { repo.labSeries(id) }) { onSeries(it.code) }
-        1 -> LabVisitList(load(emptyList(), id) { repo.labVisits(id) }) { onVisit(it.stickerId) }
-        2 -> MedsScreen(
+        0 -> com.myehr.app.ai.AskScreen(person)
+        1 -> LabSeriesList(load(emptyList(), id) { repo.labSeries(id) }) { onSeries(it.code) }
+        2 -> LabVisitList(load(emptyList(), id) { repo.labVisits(id) }) { onVisit(it.stickerId) }
+        3 -> MedsScreen(
             load(emptyList(), id) { repo.activeMeds(id) },
             load(emptyList(), id) { repo.prescriptions(id) },
             load(emptyList(), id) { repo.purchases(id) },
@@ -140,11 +141,11 @@ fun PersonChips(people: List<Person>, selectedId: String, onSelect: (String) -> 
     }
 }
 
-val HomeTabTitles = listOf("לפי בדיקה", "לפי תאריך", "תרופות", "מסמכים")
+val HomeTabTitles = listOf("שאלה", "לפי בדיקה", "לפי תאריך", "תרופות", "מסמכים")
 
 @Composable
 fun HomeTabs(tab: Int, onTab: (Int) -> Unit) {
-    TabRow(selectedTabIndex = tab) {
+    ScrollableTabRow(selectedTabIndex = tab, edgePadding = 0.dp) {
         HomeTabTitles.forEachIndexed { i, t -> Tab(selected = tab == i, onClick = { onTab(i) }, text = { Text(t, style = MaterialTheme.typography.labelLarge) }) }
     }
 }

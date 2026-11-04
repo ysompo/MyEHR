@@ -66,12 +66,15 @@ class Store private constructor(context: Context) : RawSink {
 
     init {
         System.loadLibrary("sqlcipher")
-        helper = object : SQLiteOpenHelper(context, "myehr.db", KeyManager.passphrase(context), null, 1, 0, null, null, false) {
+        helper = object : SQLiteOpenHelper(context, "myehr.db", KeyManager.passphrase(context), null, 2, 0, null, null, false) {
             override fun onCreate(db: SQLiteDatabase) {
                 db.execSQL("CREATE TABLE person (id TEXT PRIMARY KEY, name TEXT NOT NULL, is_child INTEGER NOT NULL, last_sync INTEGER)")
                 db.execSQL("CREATE TABLE raw (person TEXT NOT NULL, kind TEXT NOT NULL, k TEXT NOT NULL, json TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY(person, kind, k))")
+                onUpgrade(db, 1, 2)
             }
-            override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+            override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+                if (oldVersion < 2) db.execSQL("CREATE TABLE ai_log (at INTEGER NOT NULL, person TEXT NOT NULL, question TEXT NOT NULL, sent TEXT NOT NULL, answer TEXT NOT NULL)")
+            }
         }
     }
 
@@ -103,6 +106,18 @@ class Store private constructor(context: Context) : RawSink {
     fun all(person: String, kind: String): Map<String, String> =
         db.rawQuery("SELECT k, json FROM raw WHERE person=? AND kind=?", arrayOf(person, kind)).use { c ->
             buildMap { while (c.moveToNext()) put(c.getString(0), c.getString(1)) }
+        }
+
+    fun logAi(person: String, question: String, sent: String, answer: String) {
+        db.insert("ai_log", null, ContentValues().apply {
+            put("at", System.currentTimeMillis()); put("person", person); put("question", question); put("sent", sent); put("answer", answer)
+        })
+    }
+
+    /** (time, question, what was sent, answer), newest first. */
+    fun aiLog(person: String): List<List<String>> =
+        db.rawQuery("SELECT at, question, sent, answer FROM ai_log WHERE person=? ORDER BY at DESC LIMIT 100", arrayOf(person)).use { c ->
+            buildList { while (c.moveToNext()) add(listOf(c.getLong(0).toString(), c.getString(1), c.getString(2), c.getString(3))) }
         }
 
     fun deleteAll() {
