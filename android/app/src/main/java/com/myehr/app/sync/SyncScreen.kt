@@ -130,9 +130,19 @@ fun SyncScreen(onDone: () -> Unit) {
             try {
                 val store = withContext(Dispatchers.IO) { Store.get(context) }
                 val engine = SyncEngine(caller, store, onProgress = { status = "מוריד: $it" })
-                val p = engine.syncCurrent()
+                val switcher = MemberSwitcher { guid ->
+                    withContext(Dispatchers.Main) {
+                        val cm = CookieManager.getInstance()
+                        val value = if (guid == null) "${Api.MEMBER_COOKIE}=; Domain=.meuhedet.co.il; Path=/; Max-Age=0"
+                                    else "${Api.MEMBER_COOKIE}=$guid; Domain=.meuhedet.co.il; Path=/"
+                        val d = CompletableDeferred<Unit>()
+                        cm.setCookie(ONLINE_ORIGIN, value) { d.complete(Unit) }
+                        d.await(); cm.flush()
+                    }
+                }
+                val people = engine.syncFamily(switcher)
                 finished = true
-                status = "הסנכרון הסתיים: ${p.name}. מתנתק מהאתר."
+                status = "הסנכרון הסתיים: ${people.joinToString(", ") { it.name }}. מתנתק מהאתר."
                 clearSession()
             } catch (e: SessionExpired) {
                 status = "התחברו לאתר מאוחדת (ת\"ז, טלפון וקוד SMS)."

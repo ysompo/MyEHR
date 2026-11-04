@@ -4,7 +4,7 @@ Native Kotlin + Jetpack Compose. Hebrew, right-to-left.
 
 ## What works now
 - **App lock:** fingerprint or phone PIN every time the app opens. Screenshots are blocked.
-- **Sync:** opens the real Meuhedet site in the app. You log in yourself, and the app then pulls data for the **logged-in person**: lab results (list, details, history for graphs), medications (active, purchased, approvals, prescriptions), documents list, vaccines, ECG/institutes and the medical summary. When it's done, the app logs out of the site (clears cookies).
+- **Sync:** opens the real Meuhedet site in the app. You log in yourself, and the app then pulls data for the **logged-in person and each family member** (via the site's family-switch cookie): lab results (list, details, history for graphs), medications (active, purchased, approvals, prescriptions), documents list, vaccines, ECG/institutes and the medical summary. When it's done, the app logs out of the site (clears cookies).
 - **Storage:** an encrypted database (SQLCipher). Its key is protected by the Android Keystore. No backups, no server.
 - **Screens:** lab results by test (graph with normal range, out-of-range values in red) and by date (full detail), medications, documents.
 
@@ -22,7 +22,6 @@ A guard also scrubs any of those strings, and any 8+ digit number, from every ou
 - Answers describe trends and timing only. They are not medical advice.
 
 ## Not yet
-- Family members (waiting for the family-switch recording).
 - Opening PDFs.
 - Encrypted backup file.
 

@@ -23,9 +23,17 @@ interface RawSink {
 
 class SessionExpired : Exception("session expired")
 
+/** Selects the active family member on the site (null = back to the logged-in person). */
+fun interface MemberSwitcher {
+    suspend fun select(guid: String?)
+}
+
 /** Endpoints from docs/SITE_MAP.md. */
 object Api {
     const val MEMBER = "/umbraco/api/WeakPersonalInfoApi/GetCurrentMemberinfo"
+    const val PERSONAL_USER = "/api/Personal/User?currentNodeId=2327"
+    /** Cookie the site uses to pick the active family member (value = member GUID). */
+    const val MEMBER_COOKIE = "meuhedet.current.member2"
     const val LAB_LIST = "/umbraco/api/LabApi/Stickers"
     fun labDetail(labCode: String, stickerId: String, yyyymmdd: String) = "/api/labs/$labCode/stickers/$stickerId?date=$yyyymmdd"
     const val LAB_CATALOG = "/umbraco/api/LabApi/HistoryTestsSearchBarData"
@@ -87,6 +95,27 @@ class SyncEngine(
         if (r.status !in okStatuses) return null
         if (pauseMs > 0) delay(pauseMs)
         return r.text.takeIf { Parsers.parse(it) != null }
+    }
+
+    /**
+     * The logged-in person, then every family member reachable through the family link.
+     * Always switches back to the logged-in person at the end.
+     */
+    suspend fun syncFamily(switcher: MemberSwitcher): List<Person> {
+        val done = mutableListOf(syncCurrent())
+        val family = Parsers.familyMembers(json("GET", Api.PERSONAL_USER))
+        try {
+            family.forEachIndexed { i, (guid, _, _) ->
+                onProgress("בן משפחה ${i + 1}/${family.size}")
+                switcher.select(guid)
+                val p = syncCurrent()
+                // Guard: if the site ignored the switch we'd be re-reading the same person.
+                if (done.none { it.id == p.id }) done += p
+            }
+        } finally {
+            switcher.select(null)
+        }
+        return done
     }
 
     suspend fun syncCurrent(): Person {

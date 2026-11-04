@@ -42,6 +42,29 @@ class SyncEngineTest {
         assertEquals(1, sink.people.size)
     }
 
+    @Test fun syncsEachFamilyMemberAndSwitchesBack() = runTest {
+        var selected: String? = null
+        val switches = mutableListOf<String?>()
+        val caller = Caller { _, path, _ ->
+            when {
+                path.startsWith(Api.MEMBER) -> ok(when (selected) {
+                    null -> """{"Id":"000000001","FullName":"Parent"}"""
+                    "g-2" -> """{"Id":"000000002","FullName":"Spouse"}"""
+                    else -> """{"Id":"000000003","FullName":"Child","IsChild":true}"""
+                })
+                path.startsWith("/api/Personal/User") -> ok("""{"LoginUser":{"Id":"000000001"},
+                    "GeneticFamilyMembers":[{"Id":"000000002","Guid":"g-2","FullName":"Spouse"},{"Id":"000000003","Guid":"g-3","FullName":"Child","IsChild":true},{"Id":"000000001","Guid":"g-1"}],
+                    "FamilyMembers":[{"Id":"000000002","Guid":""}]}""")
+                else -> ok("{}")
+            }
+        }
+        val sink = Sink()
+        val people = SyncEngine(caller, sink, pauseMs = 0).syncFamily { g -> selected = g; switches += g }
+        assertEquals(listOf("000000001", "000000002", "000000003"), people.map { it.id })
+        assertEquals(listOf("g-2", "g-3", null), switches)
+        assertTrue(sink.raw.containsKey(Triple("000000003", Kind.MEMBER, "")))
+    }
+
     @Test(expected = SessionExpired::class)
     fun htmlAnswerMeansLoggedOut() = runTest {
         val caller = Caller { _, _, _ -> Resp(200, "text/html", "<html>", "https://login.meuhedet.co.il/Account/Login") }

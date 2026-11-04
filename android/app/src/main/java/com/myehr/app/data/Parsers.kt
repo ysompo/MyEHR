@@ -39,6 +39,20 @@ object Parsers {
         return Person(id = id, name = name, isChild = o.bool("IsChild") ?: false)
     }
 
+    /** Family members from /api/Personal/User: (guid, name, isChild). Members without a GUID can't be selected. */
+    fun familyMembers(text: String?): List<Triple<String, String, Boolean>> {
+        val o = parse(text).obj() ?: return emptyList()
+        val loginId = o.el("LoginUser").obj().str("Id")
+        val seen = mutableSetOf<String>()
+        return (o.list("GeneticFamilyMembers") + o.list("FamilyMembers")).mapNotNull { e ->
+            val m = e.obj()
+            val guid = m.str("Guid") ?: return@mapNotNull null
+            if (m.str("Id") != null && m.str("Id") == loginId) return@mapNotNull null
+            if (!seen.add(guid)) return@mapNotNull null
+            Triple(guid, m.str("FullName") ?: joinName(m.str("FirstName"), m.str("LastName")) ?: guid, m.bool("IsChild") ?: false)
+        }
+    }
+
     // ---------- labs ----------
     fun labVisits(text: String?): List<LabVisit> =
         parse(text).obj().list("Items").mapNotNull { e ->

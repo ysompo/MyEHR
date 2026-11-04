@@ -13,7 +13,7 @@ Endpoints and field names used by the personal area. No values, samples, list si
 |---|---|---|
 | `/umbraco/api/WeakPersonalInfoApi/GetCurrentMemberinfo?uniq=` | GET | `Id, IdType, FullName, FirstName, LastName, BirthDate, Gender, Age, IsChild, Selected, Guid, IsHeadOrSpouse, RelationType` |
 | `/api/Personal/User?currentNodeId=&uniq=` | GET | `CurrentUser`, `LoginUser`, `FamilyMembers[]`, `GeneticFamilyMembers[]` (same member fields), `IsFamilyMember`, `LastLoginDateTime` |
-| family switch | – | No request is sent: the page reloads `/` and the server returns the other person. Probably a cookie set by page script (being confirmed). |
+| family switch | cookie | Set cookie `meuhedet.current.member2` (domain `.meuhedet.co.il`, path `/`) to the member's `Guid` (from `GeneticFamilyMembers[]`), then reload. Clear it to go back to the logged-in person. No request is sent. |
 
 ## Lab results
 | Endpoint | Method | Request | Response fields |
@@ -62,6 +62,5 @@ Endpoints and field names used by the personal area. No values, samples, list si
 | `/umbraco/api/AppointmentApi/VisitsAndAppointments` | POST | TBD | appointments |
 
 ## Still to capture
-- How the family switch selects the person (cookie name and value format).
 - Prescription file download.
 - Diagnoses / sensitivities (no such page found).
