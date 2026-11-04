@@ -47,8 +47,11 @@ fun SettingsScreen(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Loo
             modifier = Modifier.padding(horizontal = Space.xl, vertical = Space.s))
 
         SectionTitle("צבעים")
-        Row(Modifier.fillMaxWidth().padding(horizontal = Space.l), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Space.s)) {
-            Looks.forEach { l -> LookOption(l, selected = l.name == look.name, modifier = Modifier.weight(1f)) { onLook(l) } }
+        // 2 per row, so names stay readable at large text sizes.
+        Looks.chunked(2).forEach { pair ->
+            Row(Modifier.fillMaxWidth().padding(horizontal = Space.l, vertical = Space.xs), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Space.s)) {
+                pair.forEach { l -> LookOption(l, selected = l.name == look.name, modifier = Modifier.weight(1f)) { onLook(l) } }
+            }
         }
         Text("בהיר או כהה לפי הגדרת הטלפון.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = Space.xl, vertical = Space.s))

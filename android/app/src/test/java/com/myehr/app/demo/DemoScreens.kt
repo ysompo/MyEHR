@@ -27,6 +27,7 @@ import com.myehr.app.ui.Look
 import com.myehr.app.ui.PineLook
 import com.myehr.app.ui.OceanLook
 import com.myehr.app.ui.OliveLook
+import com.myehr.app.ui.ContrastLook
 import com.myehr.app.ui.SettingsScreen
 import com.myehr.app.ui.SubHeader
 import com.myehr.app.ui.Tab
@@ -81,6 +82,9 @@ class DemoScreens {
     @Test fun opt_1_pine() = shot("opt_1_pine") { Screen { dash() } }
     @Test fun opt_2_ocean() = shot("opt_2_ocean", look = OceanLook) { Screen { dash() } }
     @Test fun opt_3_olive() = shot("opt_3_olive", look = OliveLook) { Screen { dash() } }
+    @Test fun opt_4_contrast() = shot("opt_4_contrast", look = ContrastLook) { Screen { dash() } }
+    @Test fun opt_4_contrast_dark() = shot("opt_4_contrast_dark", dark = true, look = ContrastLook) { Screen { dash() } }
+    @Test fun opt_4_contrast_trend() = shot("opt_4_contrast_trend", look = ContrastLook) { Screen(null) { LabSeriesScreen(all[2], data.meds) } }
     @Test fun opt_1_pine_trend() = shot("opt_1_pine_trend") { Screen(null) { LabSeriesScreen(all[2], data.meds) } }
     @Test fun opt_2_ocean_trend() = shot("opt_2_ocean_trend", look = OceanLook) { Screen(null) { LabSeriesScreen(all[2], data.meds) } }
     @Test fun opt_3_olive_trend() = shot("opt_3_olive_trend", look = OliveLook) { Screen(null) { LabSeriesScreen(all[2], data.meds) } }

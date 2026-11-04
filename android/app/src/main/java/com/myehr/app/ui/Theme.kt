@@ -202,7 +202,33 @@ val OliveLook = Look(
     28,
 )
 
-val Looks: List<Look> get() = listOf(PineLook, OceanLook, OliveLook)
+/** For weaker eyesight: near-black on white (or white on black), dark outlines, strong status colors. */
+val ContrastLook = Look(
+    "ניגודיות גבוהה",
+    lightColorScheme(
+        primary = Color(0xFF0B3D91), onPrimary = Color.White, primaryContainer = Color(0xFFD6E2FF), onPrimaryContainer = Color(0xFF001A4D),
+        secondary = Color(0xFF8A4300), onSecondary = Color.White, secondaryContainer = Color(0xFFFFE0C2), onSecondaryContainer = Color(0xFF2E1500),
+        background = Color.White, onBackground = Color(0xFF111111), surface = Color.White, onSurface = Color(0xFF111111),
+        surfaceVariant = Color(0xFFEDEDED), onSurfaceVariant = Color(0xFF333333),
+        surfaceContainerLowest = Color.White, surfaceContainerLow = Color.White, surfaceContainer = Color.White,
+        surfaceContainerHigh = Color(0xFFEDEDED), surfaceContainerHighest = Color(0xFFEDEDED),
+        outline = Color(0xFF5C5C5C), outlineVariant = Color(0xFF5C5C5C), error = Color(0xFFA0001C),
+    ),
+    darkColorScheme(
+        primary = Color(0xFFA8C4FF), onPrimary = Color(0xFF001A4D), primaryContainer = Color(0xFF0F2E66), onPrimaryContainer = Color.White,
+        secondary = Color(0xFFFFC489), onSecondary = Color(0xFF2E1500), secondaryContainer = Color(0xFF4D2600), onSecondaryContainer = Color.White,
+        background = Color.Black, onBackground = Color.White, surface = Color.Black, onSurface = Color.White,
+        surfaceVariant = Color(0xFF1F1F1F), onSurfaceVariant = Color(0xFFE0E0E0),
+        surfaceContainerLowest = Color(0xFF0D0D0D), surfaceContainerLow = Color(0xFF0D0D0D), surfaceContainer = Color(0xFF0D0D0D),
+        surfaceContainerHigh = Color(0xFF1F1F1F), surfaceContainerHighest = Color(0xFF1F1F1F),
+        outline = Color(0xFFB0B0B0), outlineVariant = Color(0xFFB0B0B0), error = Color(0xFFFFB3B3),
+    ),
+    StatusColors(Color(0xFFA0001C), Color(0xFFFFDADB), Color(0xFF1B5E20), Color(0xFFD9F2DB), Color(0xFF8A4300), Color(0xFFFFE0C2), Color(0xFF333333)),
+    StatusColors(Color(0xFFFFB3B3), Color(0xFF4D0010), Color(0xFFA5E8AA), Color(0xFF0D3311), Color(0xFFFFC489), Color(0xFF4D2600), Color(0xFFE0E0E0)),
+    16,
+)
+
+val Looks: List<Look> get() = listOf(PineLook, OceanLook, OliveLook, ContrastLook)
 
 @Composable
 fun MyEhrTheme(textSize: TextSize = TextSize.NORMAL, dark: Boolean = isSystemInDarkTheme(), look: Look = PineLook, content: @Composable () -> Unit) {
