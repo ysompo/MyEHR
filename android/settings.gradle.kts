@@ -7,3 +7,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "MyEHR"
 include(":app")
+include(":desktop")
