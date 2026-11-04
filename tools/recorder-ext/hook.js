@@ -78,6 +78,20 @@
     };
   }
 
+  // ---- cookies written by page scripts: name + masked shape only ----
+  try {
+    const desc = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie');
+    Object.defineProperty(document, 'cookie', {
+      configurable: true,
+      get() { return desc.get.call(document); },
+      set(v) {
+        try { const [pair] = String(v).split(';'); const i = pair.indexOf('=');
+          post({ ev: 'cookie-write', name: pair.slice(0, i).trim(), valueShape: M.maskStr(pair.slice(i + 1)).slice(0, 60) }); } catch {}
+        desc.set.call(document, v);
+      },
+    });
+  } catch {}
+
   // ---- forms: field names and types only, never values ----
   const describeForm = (form, how) => {
     try {

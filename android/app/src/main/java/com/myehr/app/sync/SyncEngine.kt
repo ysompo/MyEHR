@@ -39,6 +39,12 @@ object Api {
     const val VACCINES = "/umbraco/api/NursesApi/VaccinesData"
     const val EXAMS = "/api/ExaminationsApi/Search"
     const val PASSPORT = "/umbraco/api/PersonalInfoApi/medicalPassport"
+
+    // Files (PDF)
+    fun labPdf(labCode: String, stickerId: String, yyyymmdd: String) = "/api/labs/$labCode/stickers/$stickerId/pdf/$yyyymmdd"
+    fun approvalPdf(key: String) = "/api/medications/meds/approval?key=$key"
+    fun documentPdf(guid: String, documentKey: String, formCode: String, formSourceSystem: String) =
+        "/umbraco/api/OnlineCommunicationApi/ReferenceFile?guid=$guid&documentKey=$documentKey&formCode=$formCode&formSourceSystem=$formSourceSystem"
 }
 
 /** Kinds used as keys in the local store. */
@@ -75,7 +81,8 @@ class SyncEngine(
 
     private suspend fun json(method: String, path: String, body: String? = null, okStatuses: Set<Int> = setOf(200)): String? {
         val r = caller.call(method, path, body)
-        if (r.status == 401 || r.status == 403 || r.url.contains("login.meuhedet", ignoreCase = true)) throw SessionExpired()
+        // Signed out: an error code, or the request ended on the login site / sign-out page.
+        if (r.status == 401 || r.status == 403 || r.url.contains("login.meuhedet", ignoreCase = true) || r.url.contains("AuthSurface/Signout", ignoreCase = true)) throw SessionExpired()
         if (r.contentType.contains("html", ignoreCase = true)) throw SessionExpired()
         if (r.status !in okStatuses) return null
         if (pauseMs > 0) delay(pauseMs)

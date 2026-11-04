@@ -57,6 +57,14 @@ chrome.webRequest.onErrorOccurred.addListener((d) => {
   add({ src: 'net', ev: 'error', rid: d.requestId, url: M.maskUrl(d.url), error: d.error });
 }, FILTER);
 
+// Cookie changes on Meuhedet hosts: name, domain, flags and the masked SHAPE of the value (never the value).
+chrome.cookies.onChanged.addListener(({ removed, cookie, cause }) => {
+  if (!/meuhedet\.co\.il$/.test(cookie.domain.replace(/^\./, ''))) return;
+  if (/^(_ga|_gid|_gcl|_fbp|_tt|ttcsid|_cls|dt|rxv|rxVisitor|gb)/.test(cookie.name)) return; // analytics/monitoring
+  add({ src: 'cookie', ev: removed ? 'removed' : 'set', cause, name: cookie.name, domain: cookie.domain, path: cookie.path,
+    httpOnly: cookie.httpOnly, session: cookie.session, valueShape: M.isLoginHost(cookie.domain.replace(/^\./, '')) ? '<redacted>' : M.maskStr(cookie.value).slice(0, 60), valueLen: cookie.value.length });
+});
+
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   if (msg.kind === 'page') { add({ src: 'page', tab: sender.tab && sender.tab.id, ...msg.data }); return; }
   if (msg.kind === 'note') { add({ src: 'popup', ev: 'note', text: String(msg.text) }).then(() => reply({ ok: true })); return true; }

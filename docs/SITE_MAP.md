@@ -4,7 +4,7 @@ Endpoints and field names used by the personal area. No values, samples, list si
 
 - Host: `https://online.meuhedet.co.il`. Login: `https://login.meuhedet.co.il`.
 - **Auth:** HttpOnly session cookies. There is no `Authorization` header and no token in web storage.
-- **Common:** `?uniq_param=<timestamp>` (some use `uniq`) as a cache buster. Site headers: `Accept`, `X-requested-with`, `locale`, `x-node-id`, `x-platform` (values still to confirm).
+- **Common:** `?uniq_param=<timestamp>` (some use `uniq`) as a cache buster. Site headers: `X-requested-with: XMLHttpRequest`, `locale: he-IL`, `x-platform: 1`, `x-node-id: <CMS page id>` (differs per page).
 - **Active person** is held on the server. All data endpoints return data for the currently selected family member.
 - Treat every field as optional. Unknown fields are ignored.
 
@@ -13,7 +13,7 @@ Endpoints and field names used by the personal area. No values, samples, list si
 |---|---|---|
 | `/umbraco/api/WeakPersonalInfoApi/GetCurrentMemberinfo?uniq=` | GET | `Id, IdType, FullName, FirstName, LastName, BirthDate, Gender, Age, IsChild, Selected, Guid, IsHeadOrSpouse, RelationType` |
 | `/api/Personal/User?currentNodeId=&uniq=` | GET | `CurrentUser`, `LoginUser`, `FamilyMembers[]`, `GeneticFamilyMembers[]` (same member fields), `IsFamilyMember`, `LastLoginDateTime` |
-| family switch | TBD | Not yet captured |
+| family switch | – | No request is sent: the page reloads `/` and the server returns the other person. Probably a cookie set by page script (being confirmed). |
 
 ## Lab results
 | Endpoint | Method | Request | Response fields |
@@ -32,6 +32,22 @@ Endpoints and field names used by the personal area. No values, samples, list si
 | `/api/medications/meds/approvals` | GET | `Approvals[]{Description, Status, ParticipationPercent, ExpirationDate, DoctorName, File, Remarks}` |
 | `/api/medications/prescriptions` | GET | `prescriptions[]{doctorName, doctorSpecialty, prescriptionNumber, prescriptionSource, createdAt, startsAt, endsAt, fileKey, medicines[]{catalogNumber, description}, digitalSignature}` |
 
+## Login and session
+- `/` → 302 to `login.meuhedet.co.il/connect/authorize` (OpenID Connect) → `/Account/Login`.
+- Step 1: form POST `/Account/FirstStepLogin` with `IdType, Username, MobilePhoneNumber, __RequestVerificationToken`.
+- Step 2: form POST `/Account/SecondStepLogin` with `Otp, Key, Username, IdType, MobilePhone`.
+- → `/connect/authorize/callback` → auto-posted form to `https://online.meuhedet.co.il/signin-oidc` (`id_token, scope, state, session_state`) → 302 `/`.
+- After about 10 minutes idle, the page goes to `/umbraco/Surface/AuthSurface/Signout`. While the login site's session is still valid, it signs back in silently through the same OIDC redirects. Once that has expired too, data requests end on the login page (HTML).
+
+## Files (PDF)
+| What | Address |
+|---|---|
+| Lab result | `GET /api/labs/{LabCode}/stickers/{StickerId}/pdf/{yyyyMMdd}` |
+| Medication approval | `GET /api/medications/meds/approval?key={File}` |
+| ECG / institute | `GET /umbraco/surface/ExaminationsSurface/GetInstituteFile?testDate={dd/MM/yyyy HH:mm:ss}&instId={InstitueId}&instType={InstituteType}&requestType=&fileId=` |
+| Document / referral | `GET /umbraco/api/OnlineCommunicationApi/ReferenceFile?guid=&documentKey=&formCode=&formSourceSystem=` |
+| Prescription | TBD (not captured) |
+
 ## Documents and record
 | Endpoint | Method | Request | Response fields |
 |---|---|---|---|
@@ -46,8 +62,6 @@ Endpoints and field names used by the personal area. No values, samples, list si
 | `/umbraco/api/AppointmentApi/VisitsAndAppointments` | POST | TBD | appointments |
 
 ## Still to capture
-- Family switch request.
-- Values of the site headers listed above.
-- File downloads for lab `PdfGuid`, prescription `fileKey`, approval `File`, examination documents.
-- Response when the session has expired.
-- Diagnoses / sensitivities source.
+- How the family switch selects the person (cookie name and value format).
+- Prescription file download.
+- Diagnoses / sensitivities (no such page found).

@@ -7,7 +7,8 @@ What it records:
 - **Browser-level requests:** page loads, form posts, redirects and status codes. Requests are saved the moment they start, so a page reload can't drop them.
 - **Forms:** field names and types only, never values.
 - **On `login.meuhedet.co.il`:** every value is `<redacted>`. Fields that look secret (password, code, phone, ID, email, token) are `<redacted>` on every host.
-- **Header values:** only `accept`, `content-type`, `x-requested-with`, `locale`, `x-platform` and `x-node-id`. Cookies are never recorded.
+- **Header values:** only `accept`, `content-type`, `x-requested-with`, `locale`, `x-platform` and `x-node-id`.
+- **Cookies:** name, flags and the masked shape (`aaaa-9999`) only, never the value. Cookie headers are never recorded.
 - **Ignored:** analytics, monitoring, fonts and images.
 
 Everything stays inside the extension until you press **Export**.

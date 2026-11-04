@@ -59,7 +59,7 @@ if (!window.__myehrCall) {
   window.__myehrCall = async function (id, method, path, body) {
     try {
       const sep = path.indexOf('?') >= 0 ? '&' : '?';
-      const headers = { 'Accept': 'application/json, text/plain, */*', 'X-Requested-With': 'XMLHttpRequest' };
+      const headers = { 'Accept': 'application/json, text/plain, */*', 'X-Requested-With': 'XMLHttpRequest', 'locale': 'he-IL', 'x-platform': '1' };
       if (body) headers['Content-Type'] = 'application/json';
       const r = await fetch(path + sep + 'uniq_param=' + Date.now(), { method, credentials: 'include', headers, body: body || undefined });
       const text = await r.text();
