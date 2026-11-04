@@ -39,16 +39,16 @@ import kotlinx.coroutines.withContext
 private class ConsentRequest(val kind: DataKind, val summary: String, val reply: CompletableDeferred<Boolean>)
 
 @Composable
-fun AskScreen(person: Person) {
+fun AskScreen(person: Person, prefill: String? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val secrets = remember { Secrets(context) }
-    val store = remember { Store.get(context) }
-    val repo = remember { Repo(store) }
+    val storeLazy = remember { lazy { Store.get(context) } }  // opened only when a question is sent
+    val repoLazy = remember { lazy { Repo(storeLazy.value) } }
 
     var hasKey by remember { mutableStateOf(secrets.apiKey != null) }
     var keyInput by remember { mutableStateOf("") }
-    var question by remember { mutableStateOf("") }
+    var question by remember(prefill) { mutableStateOf(prefill ?: "") }
     var answer by remember { mutableStateOf<String?>(null) }
     var sentText by remember { mutableStateOf<String?>(null) }
     var showSent by remember { mutableStateOf(false) }
@@ -73,7 +73,7 @@ fun AskScreen(person: Person) {
         scope.launch {
             try {
                 val (tools, guard) = withContext(Dispatchers.IO) {
-                    AiTools(repo.aiData(person.id)) to Guard(personalStrings(repo.memberJson(person.id), repo.providerNames(person.id) + person.name))
+                    repoLazy.value.let { repo -> AiTools(repo.aiData(person.id)) to Guard(personalStrings(repo.memberJson(person.id), repo.providerNames(person.id) + person.name)) }
                 }
                 val agent = AiAgent(secrets.apiKey!!, tools, guard, beforeSend = { out ->
                     if (out.isError || secrets.consented(out.kind.name)) true
@@ -86,7 +86,7 @@ fun AskScreen(person: Person) {
                 val a = agent.ask(q)
                 answer = a
                 sentText = agent.sent.joinToString("\n\n")
-                withContext(Dispatchers.IO) { store.logAi(person.id, q, sentText!!, a) }
+                withContext(Dispatchers.IO) { storeLazy.value.logAi(person.id, q, sentText!!, a) }
             } catch (e: Exception) {
                 answer = "שגיאה: ${e.javaClass.simpleName}. בדקו חיבור לאינטרנט ואת מפתח ה-API."
             } finally {

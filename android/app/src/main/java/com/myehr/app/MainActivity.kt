@@ -19,6 +19,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.myehr.app.ui.App
+import com.myehr.app.ui.MyEhrTheme
+import com.myehr.app.ui.UiPrefs
+import androidx.compose.runtime.remember
 import com.myehr.app.ui.LockScreen
 
 class MainActivity : FragmentActivity() {
@@ -30,12 +33,13 @@ class MainActivity : FragmentActivity() {
         // No screenshots, and hidden in the recent-apps preview.
         window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         setContent {
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                MaterialTheme {
+            val textSize = remember { mutableStateOf(UiPrefs.textSize(this)) }
+            MyEhrTheme(textSize.value) {
+                run {
                     // The app stays composed under the lock screen, so a login in progress
                     // (e.g. while reading the SMS code in another app) isn't lost.
                     Box(Modifier.fillMaxSize()) {
-                        Surface(Modifier.fillMaxSize()) { App() }
+                        Surface(Modifier.fillMaxSize()) { App(textSize.value) { textSize.value = it; UiPrefs.setTextSize(this@MainActivity, it) } }
                         if (!unlocked.value) Surface(Modifier.fillMaxSize()) { LockScreen(lockMessage.value) { authenticate() } } // M3 Surface blocks touches
                     }
                 }

@@ -1,6 +1,14 @@
 package com.myehr.app.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import com.myehr.app.data.ltr
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,18 +42,37 @@ import com.myehr.app.data.range
 import com.myehr.app.data.valueUnit
 import java.time.LocalDate
 
-val OutOfRange = Color(0xFFC62828)
+val OutOfRange = Color(0xFFB8432F)
+
+@Composable
+fun LabsScreen(series: List<LabSeries>, visits: List<LabVisit>, byTest: Boolean, onMode: (Boolean) -> Unit, onSeries: (LabSeries) -> Unit, onVisit: (LabVisit) -> Unit) {
+    Column {
+        Row(Modifier.padding(horizontal = Space.l, vertical = Space.s)) {
+            Segment("לפי בדיקה", byTest) { onMode(true) }
+            Spacer(Modifier.width(Space.s))
+            Segment("לפי תאריך", !byTest) { onMode(false) }
+        }
+        if (byTest) LabSeriesList(series, onSeries) else LabVisitList(visits, onVisit)
+    }
+}
+
+@Composable
+private fun Segment(text: String, selected: Boolean, onClick: () -> Unit) {
+    val c = MaterialTheme.colorScheme
+    Text(text, style = MaterialTheme.typography.labelLarge, color = if (selected) c.onPrimary else c.onSurfaceVariant,
+        modifier = Modifier.clip(androidx.compose.foundation.shape.CircleShape).background(if (selected) c.primary else c.surfaceVariant)
+            .clickable(onClick = onClick).heightIn(min = 48.dp).padding(horizontal = Space.l, vertical = Space.m))
+}
 
 @Composable
 fun LabVisitList(visits: List<LabVisit>, onOpen: (LabVisit) -> Unit) {
     if (visits.isEmpty()) return Empty()
-    LazyColumn {
+    LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(Space.l), verticalArrangement = Arrangement.spacedBy(Space.s)) {
         items(visits, key = { it.stickerId }) { v ->
-            Column(Modifier.fillMaxWidth().clickable { onOpen(v) }.padding(16.dp)) {
-                Text(fmtDate(v.date), fontWeight = FontWeight.Bold)
-                Text(listOfNotNull(v.institute, v.doctor).joinToString(" · "), style = MaterialTheme.typography.bodySmall)
+            SoftCard(Modifier.fillMaxWidth(), onClick = { onOpen(v) }) {
+                CardRow(fmtDate(v.date), listOfNotNull(v.institute, v.doctor).joinToString(" · "), divider = false,
+                    leading = { AppIcon(com.myehr.app.R.drawable.ic_lab, null, tint = MaterialTheme.colorScheme.primary) })
             }
-            HorizontalDivider()
         }
     }
 }
@@ -53,20 +80,20 @@ fun LabVisitList(visits: List<LabVisit>, onOpen: (LabVisit) -> Unit) {
 @Composable
 fun LabSeriesList(series: List<LabSeries>, onOpen: (LabSeries) -> Unit) {
     if (series.isEmpty()) return Empty()
-    LazyColumn {
-        items(series, key = { it.code }) { s ->
-            val last = s.latest
-            Row(Modifier.fillMaxWidth().clickable { onOpen(s) }.padding(16.dp)) {
-                Column(Modifier.weight(1f)) {
-                    Text(s.name, fontWeight = FontWeight.Bold)
-                    Text("${s.points.size} תוצאות · אחרונה ${fmtDate(last?.date)}", style = MaterialTheme.typography.bodySmall)
+    LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(Space.l)) {
+        item {
+            SoftCard(Modifier.fillMaxWidth()) {
+                series.forEachIndexed { i, s ->
+                    val last = s.latest
+                    CardRow(s.name, "${s.points.size} תוצאות · ${fmtDate(last?.date)}", onClick = { onOpen(s) }, divider = i < series.lastIndex,
+                        trailing = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Sparkline(s); Spacer(Modifier.width(Space.m))
+                                ValueText(last?.resultText ?: "", s.unit, last?.status() ?: Status.NONE)
+                            }
+                        })
                 }
-                Text(
-                    valueUnit(last?.resultText, s.unit),
-                    color = if (last?.outOfRange == true) OutOfRange else Color.Unspecified,
-                )
             }
-            HorizontalDivider()
         }
     }
 }
@@ -74,39 +101,70 @@ fun LabSeriesList(series: List<LabSeries>, onOpen: (LabSeries) -> Unit) {
 @Composable
 fun LabDetailScreen(detail: LabDetail?) {
     if (detail == null || detail.records.isEmpty()) return Empty("אין פירוט לבדיקה זו.")
-    LazyColumn {
-        item { Text("${detail.labName ?: ""} ${fmtDate(detail.date)}", Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium) }
-        items(detail.records) { r ->
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
-                Column(Modifier.weight(1f)) {
-                    Text(r.title)
-                    if (r.min != null || r.max != null) Text("טווח תקין: ${range(r.min, r.max)}", style = MaterialTheme.typography.bodySmall)
-                    r.note?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+    LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(Space.l)) {
+        item {
+            Text(detail.labName ?: "", style = MaterialTheme.typography.headlineSmall)
+            Text(fmtDate(detail.date), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Gap()
+        }
+        item {
+            SoftCard(Modifier.fillMaxWidth()) {
+                detail.records.forEachIndexed { i, r ->
+                    val st = when { r.numeric == null || (r.min == null && r.max == null) -> Status.NONE; r.max != null && r.numeric!! > r.max -> Status.HIGH; r.min != null && r.numeric!! < r.min -> Status.LOW; else -> Status.OK }
+                    CardRow(r.title, listOfNotNull(if (r.min != null || r.max != null) "טווח ${range(r.min, r.max)}" else null, r.note).joinToString(" · ").ifEmpty { null },
+                        divider = i < detail.records.lastIndex,
+                        trailing = {
+                            Column(horizontalAlignment = Alignment.End) {
+                                ValueText(r.value ?: "", r.unit, st)
+                                if (st == Status.HIGH || st == Status.LOW) StatusPill(st, Modifier.padding(top = Space.xs))
+                            }
+                        })
                 }
-                Text(valueUnit(r.value, r.unit), color = if (r.outOfRange) OutOfRange else Color.Unspecified, fontWeight = FontWeight.Bold)
             }
-            HorizontalDivider()
         }
     }
 }
 
 @Composable
-fun LabSeriesScreen(series: LabSeries?) {
+fun LabSeriesScreen(series: LabSeries?, meds: List<com.myehr.app.ai.MedSummary> = emptyList()) {
     if (series == null) return Empty()
-    LazyColumn {
+    val last = series.latest
+    LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(Space.l)) {
         item {
-            Text(series.name, Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
-            LabChart(series, Modifier.fillMaxWidth().padding(16.dp))
-            val norm = series.points.lastOrNull { it.normLow != null || it.normHigh != null }
-            if (norm != null) Text("טווח תקין: ${valueUnit(range(norm.normLow, norm.normHigh), series.unit)}", Modifier.padding(horizontal = 16.dp))
-            Spacer(Modifier.height(8.dp))
-        }
-        items(series.points.reversed()) { p ->
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Text(fmtDate(p.date), Modifier.weight(1f))
-                Text(valueUnit(p.resultText, p.unit), color = if (p.outOfRange) OutOfRange else Color.Unspecified)
+            Text(series.name, style = MaterialTheme.typography.headlineSmall)
+            Gap(Space.s)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ValueText(last?.resultText ?: "", series.unit, last?.status() ?: Status.NONE, big = true)
+                Spacer(Modifier.width(Space.m))
+                StatusPill(last?.status() ?: Status.NONE)
             }
-            HorizontalDivider()
+            Text("אחרונה ${fmtDate(last?.date)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Gap()
+            SoftCard(Modifier.fillMaxWidth()) {
+                val starts = meds.mapNotNull { m -> m.firstPurchase?.let { it.take(10) to m.name } }
+                LabChart(series, Modifier.fillMaxWidth().padding(Space.l), starts)
+                starts.filter { (d, _) -> d >= (series.points.firstOrNull()?.date ?: "") }.forEach { (d, name) ->
+                    Row(Modifier.padding(horizontal = Space.l, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.width(14.dp).height(3.dp).background(LocalStatus.current.accent))
+                        Spacer(Modifier.width(Space.s))
+                        Text("התחלת $name · ${fmtDate(d)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                val norm = series.points.lastOrNull { it.normLow != null || it.normHigh != null }
+                if (norm != null) Text("הרצועה הירוקה: טווח תקין ${valueUnit(range(norm.normLow, norm.normHigh), series.unit)}",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = Space.l, end = Space.l, bottom = Space.l))
+            }
+            Gap()
+            SectionTitle("כל התוצאות", Modifier.padding(horizontal = 0.dp))
+        }
+        item {
+            SoftCard(Modifier.fillMaxWidth()) {
+                val pts = series.points.reversed()
+                pts.forEachIndexed { i, p ->
+                    CardRow(fmtDate(p.date), divider = i < pts.lastIndex, trailing = { ValueText(p.resultText ?: "", p.unit, p.status()) })
+                }
+            }
         }
     }
 }
@@ -115,12 +173,14 @@ private fun epochDay(s: String?): Long? = runCatching { LocalDate.parse(s!!.take
 
 /** Value over time. Green band = normal range, red dots = out of range. */
 @Composable
-fun LabChart(series: LabSeries, modifier: Modifier = Modifier) {
+fun LabChart(series: LabSeries, modifier: Modifier = Modifier, markers: List<Pair<String, String>> = emptyList()) {
     val pts = series.points.mapNotNull { p -> val x = epochDay(p.date); if (x == null || p.value == null) null else Triple(x, p.value, p) }
     if (pts.isEmpty()) return
     val band = series.points.lastOrNull { it.normLow != null || it.normHigh != null }
     val lineColor = MaterialTheme.colorScheme.primary
-    val bandColor = Color(0x332E7D32)
+    val bandColor = LocalStatus.current.okBg
+    val alertColor = LocalStatus.current.high
+    val accent = LocalStatus.current.accent
     val minV = pts.minOf { it.second }; val maxV = pts.maxOf { it.second }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
     Column(modifier) {
@@ -138,10 +198,16 @@ fun LabChart(series: LabSeries, modifier: Modifier = Modifier) {
             val top = py(band.normHigh ?: maxY); val bottom = py(band.normLow ?: minY)
             drawRect(bandColor, Offset(0f, top), Size(size.width, bottom - top))
         }
+        // Medication starts: dashed saffron verticals.
+        markers.forEach { (d, _) ->
+            val x = epochDay(d) ?: return@forEach
+            if (x in minX..maxX) drawLine(accent, Offset(px(x), 0f), Offset(px(x), size.height), strokeWidth = 4f,
+                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(14f, 10f)))
+        }
         val path = Path()
         pts.forEachIndexed { i, (x, y, _) -> if (i == 0) path.moveTo(px(x), py(y)) else path.lineTo(px(x), py(y)) }
-        drawPath(path, lineColor, style = Stroke(width = 4f))
-        pts.forEach { (x, y, p) -> drawCircle(if (p.outOfRange) OutOfRange else lineColor, radius = 8f, center = Offset(px(x), py(y))) }
+        drawPath(path, lineColor, style = Stroke(width = 5f, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+        pts.forEach { (x, y, p) -> drawCircle(if (p.outOfRange) alertColor else lineColor, radius = 9f, center = Offset(px(x), py(y))) }
     }
     Text("${trim(minV)} ${series.unit ?: ""}", style = MaterialTheme.typography.bodySmall)
     Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
@@ -156,6 +222,6 @@ fun LabChart(series: LabSeries, modifier: Modifier = Modifier) {
 private fun trim(d: Double) = if (d % 1.0 == 0.0) d.toLong().toString() else d.toString()
 
 @Composable
-fun Empty(text: String = "אין נתונים. לחצו על \"סנכרון\" והתחברו למאוחדת.") {
-    Text(text, Modifier.padding(24.dp), style = MaterialTheme.typography.bodyLarge)
+fun Empty(text: String = "עדיין אין נתונים. לחצו על סמל הסנכרון במסך הבית והתחברו למאוחדת.") {
+    Text(text, Modifier.padding(Space.xl), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

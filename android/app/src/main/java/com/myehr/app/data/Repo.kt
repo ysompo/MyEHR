@@ -31,6 +31,17 @@ class Repo(private val store: Store) {
             documents(p).map { it.doctor } +
             examinations(p).map { it.institute }
 
+    fun dashboard(people: List<Person>, person: Person): com.myehr.app.ui.DashboardData {
+        val all = labSeries(person.id)
+        val byRecent = all.sortedByDescending { it.latest?.date ?: "" }
+        return com.myehr.app.ui.DashboardData(
+            people = people, selected = person,
+            flagged = byRecent.filter { it.latest?.outOfRange == true }.take(6),
+            latest = byRecent.take(6),
+            meds = aiData(person.id).medications().filter { it.active },
+        )
+    }
+
     /** The AI's view of one person: names, values, dates. Built only from allow-listed fields. */
     fun aiData(p: String): AiData = object : AiData {
         override fun series() = labSeries(p)
