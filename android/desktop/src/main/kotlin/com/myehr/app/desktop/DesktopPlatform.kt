@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
@@ -21,6 +23,8 @@ import com.myehr.app.ui.SoftCard
 import com.myehr.app.ui.Space
 import com.myehr.app.ui.epochMs
 import java.awt.Desktop
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.setValue
 import java.net.URI
 import java.net.URLEncoder
 import java.time.Instant
@@ -28,7 +32,8 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.prefs.Preferences
 
-const val DESKTOP_VERSION = "1.0"
+/** Set by the installer's launcher (jpackage); "dev" when run from Gradle. */
+val DESKTOP_VERSION: String = System.getProperty("jpackage.app-version") ?: "dev"
 
 /** API key in the OS keychain; consent flags in the user's preferences. */
 object DesktopSecrets : SecretStore {
@@ -66,18 +71,44 @@ class DesktopPlatform(makeStore: () -> DesktopStore = { DesktopStore() }) : Plat
     @Composable override fun BackHandler(enabled: Boolean, onBack: () -> Unit) { /* back is the on-screen arrow */ }
 
     @Composable override fun SyncContent(onDone: () -> Unit) {
-        // Login + sync on the computer arrive in the next version.
-        SoftCard(Modifier.fillMaxWidth().padding(Space.l)) {
-            CardRow("סנכרון ממאוחדת במחשב", "יתווסף בגרסה הבאה. בינתיים אפשר לסנכרן בטלפון.", divider = false)
+        val sync by com.myehr.app.sync.SyncState.status.collectAsState()
+        androidx.compose.runtime.LaunchedEffect(Unit) { if (!sync.running) DesktopSync.start { store } }
+        androidx.compose.foundation.layout.Column(Modifier.fillMaxWidth().padding(Space.l)) {
+            Text(sync.text, style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+            if (sync.running) {
+                Text("אפשר להמשיך לעבוד במחשב בזמן הסנכרון.", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = Space.xs))
+                androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = Space.s))
+            }
+            if (!sync.running) Button(onClick = { DesktopSync.start { store } }, modifier = Modifier.padding(top = Space.s)) { Text("פתיחת חלון ההתחברות") }
+            Button(onClick = onDone, modifier = Modifier.padding(top = Space.s)) { Text("חזרה למסך הבית") }
         }
-        Button(onClick = onDone, modifier = Modifier.padding(Space.l)) { Text("חזרה") }
     }
 
-    @Composable override fun UpdateBanner() {}
+    @Composable override fun UpdateBanner() {
+        var newer by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+        androidx.compose.runtime.LaunchedEffect(Unit) { newer = DesktopUpdates.newerVersion() }
+        newer?.let { v ->
+            androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.secondaryContainer,
+                shape = androidx.compose.material3.MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth().padding(horizontal = Space.l, vertical = Space.s)) {
+                androidx.compose.foundation.layout.Column(Modifier.padding(Space.l)) {
+                    Text("גרסה חדשה למחשב: $v", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+                    Button(onClick = { DesktopUpdates.openDownload() }, modifier = Modifier.padding(top = Space.s)) { Text("הורדה והתקנה") }
+                }
+            }
+        }
+    }
 
     @Composable override fun UpdateSection() {
+        var status by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
         SoftCard(Modifier.fillMaxWidth().padding(horizontal = Space.l)) {
-            CardRow("גרסה $DESKTOP_VERSION", "עדכונים אוטומטיים יתווספו בהמשך", divider = false)
+            CardRow("גרסה $DESKTOP_VERSION", status, divider = false, trailing = {
+                androidx.compose.material3.TextButton(onClick = {
+                    status = "בודק…"
+                    scope.launch { status = DesktopUpdates.newerVersion(force = true)?.let { "גרסה $it זמינה" } ?: "זו הגרסה העדכנית" }
+                }) { Text("בדיקת עדכונים") }
+            })
+            if (status?.contains("זמינה") == true) Button(onClick = { DesktopUpdates.openDownload() }, modifier = Modifier.padding(start = Space.l, bottom = Space.l)) { Text("הורדה והתקנה") }
         }
     }
 

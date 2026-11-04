@@ -44,3 +44,12 @@ Never commit the keystore. The repo is public.
 1. Download the APK on the phone.
 2. Allow "install unknown apps" for your browser or Files app when asked.
 3. Open the APK and install.
+
+## Desktop (Windows / macOS)
+`android/desktop` is a Compose for Desktop app built from the same `android/common` code.
+- Login: a Meuhedet login window (JavaFX WebView); the download then runs in the app with the same session, and signs out at the end.
+- Storage: SQLite with every value encrypted (AES-256-GCM); the key is kept in the OS keychain (Windows Credential Manager / macOS Keychain).
+- Lock: an app password, stored only as a salted PBKDF2 hash in the keychain.
+- Add to calendar: opens Google Calendar in the browser with the appointment filled in.
+- Installers: `.github/workflows/desktop.yml` builds MyEHR-Windows.msi and Mac .dmg files (Apple Silicon + Intel) and publishes them on the `desktop-latest` release. The app checks it daily.
+- Run locally: `./gradlew :desktop:run`.
