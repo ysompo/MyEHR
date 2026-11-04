@@ -8,6 +8,7 @@ Data stays **only on the phone**. There is no server, no tracking and no ads.
 - **One login** (any family member) is enough: Meuhedet's family link shows spouse and children from the same account.
 - After login the app pulls each family member in turn through the family link.
 - Each person gets a separate profile in the app.
+- Runs on **two phones** (mine and my wife's). Each phone logs in and syncs on its own; no data passes between phones.
 
 ## Tech
 | Part | Choice | Why |
@@ -18,12 +19,12 @@ Data stays **only on the phone**. There is no server, no tracking and no ads.
 | Storage | Room + SQLCipher; key in Android Keystore | Encrypted at rest |
 | Documents | PDFs saved encrypted; shown with Android PdfRenderer | No external viewer |
 | Charts | Vico (Compose charts library) | Test value over time + normal-range band |
-| App lock | Fingerprint / phone PIN (BiometricPrompt) | Medical data on a shared phone |
+| App lock | Fingerprint / phone PIN on **every open** (BiometricPrompt) | Medical data |
 | Build | GitHub Actions → signed APK | No Android Studio needed on your side |
-| Install | Sideload APK ("install unknown apps") | Free, no Play Store |
+| Install | Sideload APK ("install unknown apps") on both phones; same signing key so updates install over the old version | Free, no Play Store |
 
 ## Features (v1)
-1. **Sync**: log in → pull everything → log out. Show what changed since last sync.
+1. **Sync** (manual button, SMS code each time): log in → pull everything for all family members → log out. Show what changed since last sync.
 2. **Lab results**: list by date and by test. Tap a test to see a graph over years with the normal range, out-of-range values marked.
 3. **Medications**: current and past, with dates and prescriber.
 4. **Documents**: list, open, share a single PDF on purpose.
