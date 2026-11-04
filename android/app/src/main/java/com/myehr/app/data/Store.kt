@@ -98,10 +98,17 @@ class Store private constructor(context: Context) : RawSink {
         }, SQLiteDatabase.CONFLICT_REPLACE)
     }
 
-    fun get(person: String, kind: String, key: String = ""): String? =
+    override fun fetchedAt(person: String, kind: String, key: String): Long? =
+        db.rawQuery("SELECT at FROM raw WHERE person=? AND kind=? AND k=?", arrayOf(person, kind, key)).use { c ->
+            if (c.moveToFirst()) c.getLong(0) else null
+        }
+
+    override fun get(person: String, kind: String, key: String): String? =
         db.rawQuery("SELECT json FROM raw WHERE person=? AND kind=? AND k=?", arrayOf(person, kind, key)).use { c ->
             if (c.moveToFirst()) c.getString(0) else null
         }
+
+    fun get(person: String, kind: String): String? = get(person, kind, "")
 
     fun all(person: String, kind: String): Map<String, String> =
         db.rawQuery("SELECT k, json FROM raw WHERE person=? AND kind=?", arrayOf(person, kind)).use { c ->

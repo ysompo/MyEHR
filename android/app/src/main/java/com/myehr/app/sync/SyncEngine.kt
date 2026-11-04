@@ -19,6 +19,9 @@ fun interface Caller {
 interface RawSink {
     fun putPerson(p: Person)
     fun put(person: String, kind: String, key: String, json: String)
+    fun get(person: String, kind: String, key: String): String?
+    /** When this answer was stored (epoch ms), or null if never. */
+    fun fetchedAt(person: String, kind: String, key: String): Long?
 }
 
 class SessionExpired : Exception("session expired")
@@ -71,6 +74,8 @@ object Kind {
     const val VACCINES = "vaccines"
     const val EXAMS = "exams"
     const val PASSPORT = "passport"
+    /** Bookkeeping: "1" while a lab-history refresh is still owed for this person. */
+    const val STATE = "sync_state"
 }
 
 /**
@@ -83,7 +88,10 @@ class SyncEngine(
     private val today: LocalDate = LocalDate.now(),
     private val pauseMs: Long = 250,
     private val onProgress: (String) -> Unit = {},
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
+    companion object { const val RESUME_WINDOW_MS = 6 * 3600_000L }
+
     private val iso = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private fun isoDay(d: LocalDate) = d.atStartOfDay().atOffset(ZoneOffset.UTC).format(iso)
 
@@ -102,6 +110,7 @@ class SyncEngine(
      * Always switches back to the logged-in person at the end.
      */
     suspend fun syncFamily(switcher: MemberSwitcher): List<Person> {
+        switcher.select(null) // start from the logged-in person, even after an interrupted run
         val done = mutableListOf(syncCurrent())
         val family = Parsers.familyMembers(json("GET", Api.PERSONAL_USER))
         try {
@@ -129,23 +138,35 @@ class SyncEngine(
         val range = """{"FromDate":"${isoDay(today.minusYears(30))}","ToDate":"${isoDay(today.plusDays(1))}"}"""
         val labList = json("POST", Api.LAB_LIST, range)
             ?: json("POST", Api.LAB_LIST, """{"FromDate":"${isoDay(today.minusYears(3))}","ToDate":"${isoDay(today.plusDays(1))}"}""")
+        var newVisits = 0
         if (labList != null) {
             sink.put(id, Kind.LAB_LIST, "", labList)
-            val visits = Parsers.labVisits(labList)
+            // Only results not stored yet (lab results don't change once issued).
+            val visits = Parsers.labVisits(labList).filter { sink.fetchedAt(id, Kind.LAB_DETAIL, it.stickerId) == null }
+            newVisits = visits.size
+            if (newVisits > 0) sink.put(id, Kind.STATE, "history_pending", "1")
             visits.forEachIndexed { i, v ->
-                onProgress("תוצאות בדיקה ${i + 1}/${visits.size}")
+                onProgress("תוצאות חדשות ${i + 1}/${visits.size}")
                 val day = v.date?.take(10)?.replace("-", "") ?: return@forEachIndexed
                 json("GET", Api.labDetail(v.labCode, v.stickerId, day))?.let { sink.put(id, Kind.LAB_DETAIL, v.stickerId, it) }
             }
         }
 
+        // History (graphs) only when there are new results, or never fetched. Resumable:
+        // tests refreshed in the last few hours are skipped after an interruption.
+        val pending = sink.get(id, Kind.STATE, "history_pending") == "1"
         json("GET", Api.LAB_CATALOG)?.let { catalog ->
             sink.put(id, Kind.LAB_CATALOG, "", catalog)
-            val tests = Parsers.labTestCatalog(catalog)
+            val fresh = clock() - RESUME_WINDOW_MS
+            val tests = Parsers.labTestCatalog(catalog).filter { (code, _) ->
+                val at = sink.fetchedAt(id, Kind.LAB_HISTORY, code)
+                at == null || (pending && at < fresh)
+            }
             tests.forEachIndexed { i, (code, _) ->
                 onProgress("היסטוריית בדיקות ${i + 1}/${tests.size}")
                 json("POST", Api.LAB_HISTORY, """{"Tests":["$code"]}""")?.let { sink.put(id, Kind.LAB_HISTORY, code, it) }
             }
+            sink.put(id, Kind.STATE, "history_pending", "0")
         }
 
         onProgress("תרופות")

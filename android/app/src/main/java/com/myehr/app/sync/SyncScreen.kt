@@ -112,6 +112,8 @@ fun SyncScreen(onDone: () -> Unit) {
     var status by remember { mutableStateOf("התחברו לאתר מאוחדת (ת\"ז, טלפון וקוד SMS).") }
     var running by remember { mutableStateOf(false) }
     var finished by remember { mutableStateOf(false) }
+    var interruptions by remember { mutableStateOf(0) }
+    val view = androidx.compose.ui.platform.LocalView.current
 
     val web = remember {
         WebView(context).apply {
@@ -129,7 +131,7 @@ fun SyncScreen(onDone: () -> Unit) {
         scope.launch {
             try {
                 val store = withContext(Dispatchers.IO) { Store.get(context) }
-                val engine = SyncEngine(caller, store, onProgress = { status = "מוריד: $it" })
+                val engine = SyncEngine(caller, store, onProgress = { status = "מוריד: $it\nהשאירו את המסך פתוח." })
                 val switcher = MemberSwitcher { guid ->
                     withContext(Dispatchers.Main) {
                         val cm = CookieManager.getInstance()
@@ -145,12 +147,28 @@ fun SyncScreen(onDone: () -> Unit) {
                 status = "הסנכרון הסתיים: ${people.joinToString(", ") { it.name }}. מתנתק מהאתר."
                 clearSession()
             } catch (e: SessionExpired) {
-                status = "התחברו לאתר מאוחדת (ת\"ז, טלפון וקוד SMS)."
+                // Usually the site signed in again by itself; the next page load resumes where we stopped.
+                interruptions++
+                status = if (interruptions < 4) "החיבור למאוחדת התחדש. ממשיך מהמקום שבו נעצר…"
+                         else "התחברו שוב לאתר מאוחדת (ת\"ז, טלפון וקוד SMS)."
             } catch (e: Exception) {
                 status = "שגיאה בסנכרון: ${e.javaClass.simpleName}"
             } finally {
                 running = false
             }
+        }
+    }
+
+    // Keep the screen on while syncing (a locked screen pauses the page).
+    DisposableEffect(running) {
+        view.keepScreenOn = running
+        onDispose { view.keepScreenOn = false }
+    }
+    // Keep the site's idle timer from signing out mid-sync: a small synthetic activity every 45 s.
+    androidx.compose.runtime.LaunchedEffect(running) {
+        while (running) {
+            kotlinx.coroutines.delay(45_000)
+            web.evaluateJavascript("['mousemove','keydown','scroll','touchstart'].forEach(function(t){try{document.dispatchEvent(new Event(t,{bubbles:true}));window.dispatchEvent(new Event(t));}catch(e){}});", null)
         }
     }
 
