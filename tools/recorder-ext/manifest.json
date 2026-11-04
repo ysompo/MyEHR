@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "MyEHR recorder",
+  "version": "2.0",
+  "description": "Records the structure (not the values) of Meuhedet site requests for the MyEHR app.",
+  "permissions": ["webRequest", "storage", "unlimitedStorage"],
+  "host_permissions": ["*://*.meuhedet.co.il/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html", "default_title": "MyEHR recorder" },
+  "content_scripts": [
+    {
+      "matches": ["*://*.meuhedet.co.il/*"],
+      "js": ["mask.js", "hook.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": ["*://*.meuhedet.co.il/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}
