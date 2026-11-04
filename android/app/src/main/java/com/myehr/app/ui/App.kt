@@ -67,14 +67,10 @@ fun App() {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(if (screen == Screen.Sync) "סנכרון ממאוחדת" else "התיק הרפואי שלי") },
-                navigationIcon = {
-                    if (screen != Screen.Home) IconButton(onClick = { screen = Screen.Home }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "חזרה")
-                    }
-                },
-                actions = { if (screen == Screen.Home) TextButton(onClick = { screen = Screen.Sync }) { Text("סנכרון") } },
+            AppTopBar(
+                title = if (screen == Screen.Sync) "סנכרון ממאוחדת" else "התיק הרפואי שלי",
+                onBack = if (screen != Screen.Home) ({ screen = Screen.Home }) else null,
+                onSync = if (screen == Screen.Home) ({ screen = Screen.Sync }) else null,
             )
         },
     ) { pad ->
@@ -91,11 +87,7 @@ fun App() {
                 }
                 Screen.Home -> {
                     if (person == null) { Empty(); return@Column }
-                    if (people.size > 1) Row(Modifier.horizontalScroll(rememberScrollState()).padding(8.dp)) {
-                        people.forEach { p ->
-                            FilterChip(selected = p.id == person.id, onClick = { personId = p.id }, label = { Text(p.name) }, modifier = Modifier.padding(end = 6.dp))
-                        }
-                    }
+                    PersonChips(people, person.id) { personId = it }
                     Home(repo, person, onVisit = { screen = Screen.LabVisitDetail(it) }, onSeries = { screen = Screen.LabHistory(it) })
                 }
             }
@@ -106,10 +98,7 @@ fun App() {
 @Composable
 private fun Home(repo: Repo, person: Person, onVisit: (String) -> Unit, onSeries: (String) -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    val tabs = listOf("לפי בדיקה", "לפי תאריך", "תרופות", "מסמכים")
-    TabRow(selectedTabIndex = tab) {
-        tabs.forEachIndexed { i, t -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t, style = MaterialTheme.typography.labelLarge) }) }
-    }
+    HomeTabs(tab) { tab = it }
     val id = person.id
     when (tab) {
         0 -> LabSeriesList(load(emptyList(), id) { repo.labSeries(id) }) { onSeries(it.code) }
@@ -124,5 +113,38 @@ private fun Home(repo: Repo, person: Person, onVisit: (String) -> Unit, onSeries
             load(emptyList(), id) { repo.vaccines(id) },
             load(emptyList(), id) { repo.examinations(id) },
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppTopBar(title: String, onBack: (() -> Unit)?, onSync: (() -> Unit)?) {
+    TopAppBar(
+        title = { Text(title) },
+        navigationIcon = {
+            if (onBack != null) IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "חזרה")
+            }
+        },
+        actions = { if (onSync != null) TextButton(onClick = onSync) { Text("סנכרון") } },
+    )
+}
+
+@Composable
+fun PersonChips(people: List<Person>, selectedId: String, onSelect: (String) -> Unit) {
+    if (people.size < 2) return
+    Row(Modifier.horizontalScroll(rememberScrollState()).padding(8.dp)) {
+        people.forEach { p ->
+            FilterChip(selected = p.id == selectedId, onClick = { onSelect(p.id) }, label = { Text(p.name) }, modifier = Modifier.padding(end = 6.dp))
+        }
+    }
+}
+
+val HomeTabTitles = listOf("לפי בדיקה", "לפי תאריך", "תרופות", "מסמכים")
+
+@Composable
+fun HomeTabs(tab: Int, onTab: (Int) -> Unit) {
+    TabRow(selectedTabIndex = tab) {
+        HomeTabTitles.forEachIndexed { i, t -> Tab(selected = tab == i, onClick = { onTab(i) }, text = { Text(t, style = MaterialTheme.typography.labelLarge) }) }
     }
 }

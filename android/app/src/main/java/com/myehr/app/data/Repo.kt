@@ -24,3 +24,15 @@ fun fmtDate(s: String?): String {
     if (s == null || s.length < 10 || s[4] != '-') return s ?: ""
     return "${s.substring(8, 10)}/${s.substring(5, 7)}/${s.substring(0, 4)}"
 }
+
+/** Keeps numbers, units and ranges left-to-right inside Hebrew text ("13.4 g/dL", "12–16"). */
+fun ltr(s: String): String = "\u2066$s\u2069"
+
+/** "13.4 g/dL" as one left-to-right piece, or "" if both are missing. */
+fun valueUnit(value: String?, unit: String?): String =
+    listOfNotNull(value, unit).joinToString(" ").let { if (it.isEmpty()) it else ltr(it) }
+
+/** "12–16" (either end may be missing). */
+fun range(low: Double?, high: Double?): String = ltr("${low?.let(::num) ?: ""}–${high?.let(::num) ?: ""}")
+
+private fun num(d: Double): String = if (d % 1.0 == 0.0) d.toLong().toString() else d.toString()

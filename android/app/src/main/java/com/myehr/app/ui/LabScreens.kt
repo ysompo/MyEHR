@@ -14,6 +14,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -26,6 +29,9 @@ import com.myehr.app.data.LabDetail
 import com.myehr.app.data.LabSeries
 import com.myehr.app.data.LabVisit
 import com.myehr.app.data.fmtDate
+import com.myehr.app.data.ltr
+import com.myehr.app.data.range
+import com.myehr.app.data.valueUnit
 import java.time.LocalDate
 
 val OutOfRange = Color(0xFFC62828)
@@ -56,7 +62,7 @@ fun LabSeriesList(series: List<LabSeries>, onOpen: (LabSeries) -> Unit) {
                     Text("${s.points.size} תוצאות · אחרונה ${fmtDate(last?.date)}", style = MaterialTheme.typography.bodySmall)
                 }
                 Text(
-                    listOfNotNull(last?.resultText, s.unit).joinToString(" "),
+                    valueUnit(last?.resultText, s.unit),
                     color = if (last?.outOfRange == true) OutOfRange else Color.Unspecified,
                 )
             }
@@ -74,10 +80,10 @@ fun LabDetailScreen(detail: LabDetail?) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
                 Column(Modifier.weight(1f)) {
                     Text(r.title)
-                    if (r.min != null || r.max != null) Text("טווח תקין: ${r.min ?: ""}–${r.max ?: ""}", style = MaterialTheme.typography.bodySmall)
+                    if (r.min != null || r.max != null) Text("טווח תקין: ${range(r.min, r.max)}", style = MaterialTheme.typography.bodySmall)
                     r.note?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 }
-                Text(listOfNotNull(r.value, r.unit).joinToString(" "), color = if (r.outOfRange) OutOfRange else Color.Unspecified, fontWeight = FontWeight.Bold)
+                Text(valueUnit(r.value, r.unit), color = if (r.outOfRange) OutOfRange else Color.Unspecified, fontWeight = FontWeight.Bold)
             }
             HorizontalDivider()
         }
@@ -90,15 +96,15 @@ fun LabSeriesScreen(series: LabSeries?) {
     LazyColumn {
         item {
             Text(series.name, Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
-            LabChart(series, Modifier.fillMaxWidth().height(240.dp).padding(16.dp))
+            LabChart(series, Modifier.fillMaxWidth().padding(16.dp))
             val norm = series.points.lastOrNull { it.normLow != null || it.normHigh != null }
-            if (norm != null) Text("טווח תקין: ${norm.normLow ?: ""}–${norm.normHigh ?: ""} ${series.unit ?: ""}", Modifier.padding(horizontal = 16.dp))
+            if (norm != null) Text("טווח תקין: ${valueUnit(range(norm.normLow, norm.normHigh), series.unit)}", Modifier.padding(horizontal = 16.dp))
             Spacer(Modifier.height(8.dp))
         }
         items(series.points.reversed()) { p ->
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(fmtDate(p.date), Modifier.weight(1f))
-                Text(listOfNotNull(p.resultText, p.unit).joinToString(" "), color = if (p.outOfRange) OutOfRange else Color.Unspecified)
+                Text(valueUnit(p.resultText, p.unit), color = if (p.outOfRange) OutOfRange else Color.Unspecified)
             }
             HorizontalDivider()
         }
@@ -115,7 +121,11 @@ fun LabChart(series: LabSeries, modifier: Modifier = Modifier) {
     val band = series.points.lastOrNull { it.normLow != null || it.normHigh != null }
     val lineColor = MaterialTheme.colorScheme.primary
     val bandColor = Color(0x332E7D32)
-    Canvas(modifier) {
+    val minV = pts.minOf { it.second }; val maxV = pts.maxOf { it.second }
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+    Column(modifier) {
+    Text("${trim(maxV)} ${series.unit ?: ""}", style = MaterialTheme.typography.bodySmall)
+    Canvas(Modifier.fillMaxWidth().height(200.dp)) {
         val xs = pts.map { it.first }
         val ys = pts.map { it.second } + listOfNotNull(band?.normLow, band?.normHigh)
         val minX = xs.min(); val maxX = maxOf(xs.max(), minX + 1)
@@ -133,7 +143,17 @@ fun LabChart(series: LabSeries, modifier: Modifier = Modifier) {
         drawPath(path, lineColor, style = Stroke(width = 4f))
         pts.forEach { (x, y, p) -> drawCircle(if (p.outOfRange) OutOfRange else lineColor, radius = 8f, center = Offset(px(x), py(y))) }
     }
+    Text("${trim(minV)} ${series.unit ?: ""}", style = MaterialTheme.typography.bodySmall)
+    Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+        Text(fmtDate(pts.first().third.date), style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.weight(1f))
+        Text(fmtDate(pts.last().third.date), style = MaterialTheme.typography.bodySmall)
+    }
+    }
+    }
 }
+
+private fun trim(d: Double) = if (d % 1.0 == 0.0) d.toLong().toString() else d.toString()
 
 @Composable
 fun Empty(text: String = "אין נתונים. לחצו על \"סנכרון\" והתחברו למאוחדת.") {
