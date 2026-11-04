@@ -62,7 +62,9 @@ jobs:
           path: dist
           merge-multiple: true
       - name: Version file
-        run: echo "{\"version\": \"1.0.${GITHUB_RUN_NUMBER}\"}" > dist/desktop-version.json
+        run: |
+          printf '{"version": "1.0.%s"}\n' "$GITHUB_RUN_NUMBER" > dist/desktop-version.json
+          cat dist/desktop-version.json
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: desktop-latest
