@@ -143,6 +143,8 @@ object UiPrefs {
     private fun prefs(c: Context) = c.getSharedPreferences("myehr_ui", Context.MODE_PRIVATE)
     fun textSize(c: Context) = runCatching { TextSize.valueOf(prefs(c).getString("text_size", null)!!) }.getOrDefault(TextSize.NORMAL)
     fun setTextSize(c: Context, t: TextSize) = prefs(c).edit().putString("text_size", t.name).apply()
+    fun look(c: Context): Look = Looks.firstOrNull { it.name == prefs(c).getString("look", null) } ?: PineLook
+    fun setLook(c: Context, l: Look) = prefs(c).edit().putString("look", l.name).apply()
 }
 
 /** A complete look: colors (light + dark) and card roundness. */
@@ -199,6 +201,8 @@ val OliveLook = Look(
     StatusColors(Color(0xFFF0A49A), Color(0xFF4A231E), Color(0xFFBFCF94), Color(0xFF34401C), Color(0xFFEFA07D), Color(0xFF4F2A18), Color(0xFFB4AD9F)),
     28,
 )
+
+val Looks: List<Look> get() = listOf(PineLook, OceanLook, OliveLook)
 
 @Composable
 fun MyEhrTheme(textSize: TextSize = TextSize.NORMAL, dark: Boolean = isSystemInDarkTheme(), look: Look = PineLook, content: @Composable () -> Unit) {

@@ -66,7 +66,7 @@ fun BottomBar(tab: Tab, onTab: (Tab) -> Unit) {
 }
 
 @Composable
-fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit) {
+fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLook, onLook: (Look) -> Unit = {}) {
     val context = LocalContext.current
     val repo = remember { Repo(Store.get(context)) }
     val secrets = remember { Secrets(context) }
@@ -89,7 +89,7 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit) {
         Column(Modifier.padding(pad).fillMaxSize()) {
             when (val s = sub) {
                 Sub.Sync -> { SubHeader("סנכרון ממאוחדת") { sub = null }; SyncScreen(onDone = { refresh++; sub = null }) }
-                Sub.Settings -> { SubHeader("הגדרות") { sub = null }; SettingsScreen(textSize, onTextSize, hasKey) { secrets.apiKey = null; hasKey = false } }
+                Sub.Settings -> { SubHeader("הגדרות") { sub = null }; SettingsScreen(textSize, onTextSize, look, onLook, hasKey) { secrets.apiKey = null; hasKey = false } }
                 is Sub.LabVisitDetail -> { SubHeader("תוצאות בדיקה") { sub = null }; LabDetailScreen(load(null, s, person?.id) { person?.let { repo.labDetail(it.id, s.stickerId) } }) }
                 is Sub.LabHistory -> { SubHeader("מגמה לאורך זמן") { sub = null }; LabSeriesScreen(load(null, s, person?.id) { person?.let { repo.series(it.id, s.code) } }, load(emptyList(), person?.id) { person?.let { repo.aiData(it.id).medications() } ?: emptyList() }) }
                 null -> {

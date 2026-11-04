@@ -34,12 +34,13 @@ class MainActivity : FragmentActivity() {
         window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         setContent {
             val textSize = remember { mutableStateOf(UiPrefs.textSize(this)) }
-            MyEhrTheme(textSize.value) {
+            val look = remember { mutableStateOf(UiPrefs.look(this)) }
+            MyEhrTheme(textSize.value, look = look.value) {
                 run {
                     // The app stays composed under the lock screen, so a login in progress
                     // (e.g. while reading the SMS code in another app) isn't lost.
                     Box(Modifier.fillMaxSize()) {
-                        Surface(Modifier.fillMaxSize()) { App(textSize.value) { textSize.value = it; UiPrefs.setTextSize(this@MainActivity, it) } }
+                        Surface(Modifier.fillMaxSize()) { App(textSize.value, { textSize.value = it; UiPrefs.setTextSize(this@MainActivity, it) }, look.value, { look.value = it; UiPrefs.setLook(this@MainActivity, it) }) }
                         if (!unlocked.value) Surface(Modifier.fillMaxSize()) { LockScreen(lockMessage.value) { authenticate() } } // M3 Surface blocks touches
                     }
                 }

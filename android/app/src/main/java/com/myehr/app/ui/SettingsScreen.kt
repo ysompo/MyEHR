@@ -12,12 +12,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.selection.selectable
 
 @Composable
-fun SettingsScreen(textSize: TextSize, onTextSize: (TextSize) -> Unit, hasApiKey: Boolean, onClearApiKey: () -> Unit) {
+fun SettingsScreen(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look, onLook: (Look) -> Unit, hasApiKey: Boolean, onClearApiKey: () -> Unit) {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = Space.xl)) {
         SectionTitle("גודל טקסט")
         SoftCard(Modifier.fillMaxWidth().padding(horizontal = Space.l)) {
@@ -39,10 +46,12 @@ fun SettingsScreen(textSize: TextSize, onTextSize: (TextSize) -> Unit, hasApiKey
         Text("נוסף על הגדרת גודל הגופן של הטלפון.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = Space.xl, vertical = Space.s))
 
-        SectionTitle("מראה")
-        SoftCard(Modifier.fillMaxWidth().padding(horizontal = Space.l)) {
-            CardRow("בהיר / כהה", "לפי הגדרת הטלפון", divider = false)
+        SectionTitle("צבעים")
+        Row(Modifier.fillMaxWidth().padding(horizontal = Space.l), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Space.s)) {
+            Looks.forEach { l -> LookOption(l, selected = l.name == look.name, modifier = Modifier.weight(1f)) { onLook(l) } }
         }
+        Text("בהיר או כהה לפי הגדרת הטלפון.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = Space.xl, vertical = Space.s))
 
         SectionTitle("שאלות ל-Claude")
         SoftCard(Modifier.fillMaxWidth().padding(horizontal = Space.l)) {
@@ -65,3 +74,26 @@ fun SubHeader(title: String, onBack: () -> Unit) {
     }
 }
 
+
+/** A small preview of a look: its background, card, main color and accent. */
+@Composable
+private fun LookOption(look: Look, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val dark = androidx.compose.foundation.isSystemInDarkTheme()
+    val c = if (dark) look.dark else look.light
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(look.cardRadius.dp)
+    Column(
+        modifier.clip(MaterialTheme.shapes.medium)
+            .border(if (selected) 3.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .background(c.background).padding(Space.m),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(Modifier.fillMaxWidth().height(44.dp).clip(shape).background(c.surfaceContainer).border(1.dp, c.outline, shape).padding(Space.s)) {
+            Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.size(24.dp).clip(androidx.compose.foundation.shape.CircleShape).background(c.primary))
+                Box(Modifier.size(24.dp).clip(androidx.compose.foundation.shape.CircleShape).background(c.secondary))
+            }
+        }
+        Text(look.name, style = MaterialTheme.typography.titleSmall, color = c.onBackground, modifier = Modifier.padding(top = Space.s))
+    }
+}
