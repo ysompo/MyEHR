@@ -62,6 +62,9 @@ fun SettingsScreen(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Loo
                 trailing = { if (hasApiKey) TextButton(onClick = onClearApiKey) { Text("מחיקה") } })
         }
 
+        SectionTitle("עדכונים")
+        com.myehr.app.update.UpdateSection()
+
         SectionTitle("פרטיות")
         SoftCard(Modifier.fillMaxWidth().padding(horizontal = Space.l)) {
             CardRow("המידע נשמר רק בטלפון", "מוצפן, ללא גיבוי לענן וללא שרת", divider = false)

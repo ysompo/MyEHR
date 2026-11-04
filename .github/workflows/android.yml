@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write  # to publish the signed APK on the "android-latest" release
 
 jobs:
   build:
@@ -53,3 +53,24 @@ jobs:
           name: myehr-apk
           path: android/app/build/outputs/apk/**/*.apk
           retention-days: 14
+
+      # Fixed download link used by the app's updater:
+      # https://github.com/<owner>/<repo>/releases/download/android-latest/MyEHR.apk (+ version.json)
+      - name: Prepare update files
+        if: env.MYEHR_KEYSTORE_PATH != ''
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/MyEHR.apk"
+          SHA=$(sha256sum "$RUNNER_TEMP/MyEHR.apk" | cut -d' ' -f1)
+          echo "{\"versionCode\": ${GITHUB_RUN_NUMBER}, \"versionName\": \"0.1.${GITHUB_RUN_NUMBER}\", \"sha256\": \"$SHA\"}" > "$RUNNER_TEMP/version.json"
+          cat "$RUNNER_TEMP/version.json"
+      - uses: softprops/action-gh-release@v2
+        if: env.MYEHR_KEYSTORE_PATH != ''
+        with:
+          tag_name: android-latest
+          name: MyEHR (latest Android build)
+          prerelease: true
+          body: "Latest signed build. On Android, install MyEHR.apk; later updates arrive inside the app."
+          files: |
+            ${{ runner.temp }}/MyEHR.apk
+            ${{ runner.temp }}/version.json
+          overwrite_files: true

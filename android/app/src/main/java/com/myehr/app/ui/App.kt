@@ -80,6 +80,10 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
     var personId by rememberSaveable { mutableStateOf<String?>(null) }
     val person = people.firstOrNull { it.id == personId } ?: people.firstOrNull()
 
+    // Once a day: is there a newer signed build?
+    var update by remember { mutableStateOf<com.myehr.app.update.UpdateInfo?>(null) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { update = com.myehr.app.update.Updater.dailyCheck(context) }
+
     BackHandler(enabled = sub != null || tab != Tab.HOME) { if (sub != null) sub = null else tab = Tab.HOME }
 
     Scaffold(
@@ -100,6 +104,7 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
                     val id = person.id
                     when (tab) {
                         Tab.HOME -> {
+                            update?.let { u -> com.myehr.app.update.UpdateBanner(u) { update = null } }
                             val d = load(null, id, refresh) { repo.dashboard(people, person) }
                             if (d != null) Dashboard(d, onPerson = { personId = it }, onAsk = { askPrefill = it; tab = Tab.ASK },
                                 onSeries = { sub = Sub.LabHistory(it) }, onSync = { sub = Sub.Sync }, onSettings = { sub = Sub.Settings })
