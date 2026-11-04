@@ -19,6 +19,9 @@ class Repo(private val store: Store) {
     fun documents(p: String) = Parsers.documents(store.get(p, Kind.DOCUMENTS))
     fun vaccines(p: String) = Parsers.vaccines(store.get(p, Kind.VACCINES))
     fun examinations(p: String) = Parsers.examinations(store.get(p, Kind.EXAMS))
+    fun upcomingVisits(p: String) = Parsers.upcomingVisits(store.get(p, Kind.APPOINTMENTS))
+        .filter { (it.start ?: "") >= java.time.LocalDate.now().toString() }
+    fun pastVisits(p: String) = Parsers.pastVisits(store.get(p, Kind.PASSPORT))
 
     fun memberJson(p: String) = Parsers.parse(store.get(p, Kind.MEMBER))
 

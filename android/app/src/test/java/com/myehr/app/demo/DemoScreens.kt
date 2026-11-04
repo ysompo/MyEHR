@@ -100,5 +100,14 @@ class DemoScreens {
     }
     @Test fun f_ask() = shot("f_ask") { Screen(Tab.ASK) { AskScreen(me, "איך השתנה הכולסטרול מאז שהתחלתי סטטין?") } }
     @Test fun g_settings() = shot("g_settings") { Screen(null) { SubHeader("הגדרות") {}; SettingsScreen(TextSize.LARGE, {}, PineLook, {}, true) {} } }
+    @Test fun i_visits() = shot("i_visits") {
+        Screen(Tab.VISITS) {
+            com.myehr.app.ui.VisitsScreen(
+                listOf(com.myehr.app.data.Visit("2026-11-20T09:30:00", "2026-11-20T09:45:00", "רפואת משפחה", "ד\"ר לדוגמה", "מרפאה לדוגמה, רחוב לדוגמה 1", true)),
+                listOf(com.myehr.app.data.Visit("2026-08-11T10:00:00", null, "עיניים", "ד\"ר אחר", "מכון לדוגמה", false),
+                       com.myehr.app.data.Visit("2026-03-02T16:15:00", null, "רפואת משפחה", "ד\"ר לדוגמה", "מרפאה לדוגמה", false)),
+            )
+        }
+    }
     @Test fun h_lock() = shot("h_lock") { Surface(Modifier.fillMaxSize()) { LockScreen(null) {} } }
 }

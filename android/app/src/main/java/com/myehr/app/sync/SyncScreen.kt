@@ -1,6 +1,13 @@
 package com.myehr.app.sync
 
 import android.annotation.SuppressLint
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.collectAsState
+import androidx.core.content.ContextCompat
 import android.net.Uri
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
@@ -98,22 +105,23 @@ private class PageCaller(private val web: WebView) : Caller {
     private fun q(s: String) = JsonPrimitive(s).toString()
 }
 
-private fun clearSession() {
-    CookieManager.getInstance().removeAllCookies(null)
-    CookieManager.getInstance().flush()
-    WebStorage.getInstance().deleteAllData()
-}
-
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun SyncScreen(onDone: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var status by remember { mutableStateOf("התחברו לאתר מאוחדת (ת\"ז, טלפון וקוד SMS).") }
-    var running by remember { mutableStateOf(false) }
-    var finished by remember { mutableStateOf(false) }
-    var interruptions by remember { mutableStateOf(0) }
-    val view = androidx.compose.ui.platform.LocalView.current
+    val sync by SyncState.status.collectAsState()
+    var handedOff by remember { mutableStateOf(sync.running) }
+    var checking by remember { mutableStateOf(false) }
+    var hint by remember { mutableStateOf("התחברו לאתר מאוחדת (ת\"ז, טלפון וקוד SMS).") }
+
+    // Android 13+: allow the progress notification (sync works without it too).
+    val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    DisposableEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+            notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        onDispose { }
+    }
 
     val web = remember {
         WebView(context).apply {
@@ -125,50 +133,20 @@ fun SyncScreen(onDone: () -> Unit) {
     }
     val caller = remember { PageCaller(web) }
 
-    fun trySync() {
-        if (running || finished) return
-        running = true
+    /** Logged in? Then hand the session to the background service. */
+    fun handOffIfLoggedIn() {
+        if (handedOff || checking) return
+        checking = true
         scope.launch {
             try {
-                val store = withContext(Dispatchers.IO) { Store.get(context) }
-                val engine = SyncEngine(caller, store, onProgress = { status = "מוריד: $it\nהשאירו את המסך פתוח." })
-                val switcher = MemberSwitcher { guid ->
-                    withContext(Dispatchers.Main) {
-                        val cm = CookieManager.getInstance()
-                        val value = if (guid == null) "${Api.MEMBER_COOKIE}=; Domain=.meuhedet.co.il; Path=/; Max-Age=0"
-                                    else "${Api.MEMBER_COOKIE}=$guid; Domain=.meuhedet.co.il; Path=/"
-                        val d = CompletableDeferred<Unit>()
-                        cm.setCookie(ONLINE_ORIGIN, value) { d.complete(Unit) }
-                        d.await(); cm.flush()
-                    }
+                val r = caller.call("GET", Api.MEMBER, null)
+                val loggedIn = r.status == 200 && !r.contentType.contains("html") && com.myehr.app.data.Parsers.person(r.text) != null
+                if (loggedIn) {
+                    CookieManager.getInstance().flush()
+                    SyncService.start(context)
+                    handedOff = true
                 }
-                val people = engine.syncFamily(switcher)
-                finished = true
-                status = "הסנכרון הסתיים: ${people.joinToString(", ") { it.name }}. מתנתק מהאתר."
-                clearSession()
-            } catch (e: SessionExpired) {
-                // Usually the site signed in again by itself; the next page load resumes where we stopped.
-                interruptions++
-                status = if (interruptions < 4) "החיבור למאוחדת התחדש. ממשיך מהמקום שבו נעצר…"
-                         else "התחברו שוב לאתר מאוחדת (ת\"ז, טלפון וקוד SMS)."
-            } catch (e: Exception) {
-                status = "שגיאה בסנכרון: ${e.javaClass.simpleName}"
-            } finally {
-                running = false
-            }
-        }
-    }
-
-    // Keep the screen on while syncing (a locked screen pauses the page).
-    DisposableEffect(running) {
-        view.keepScreenOn = running
-        onDispose { view.keepScreenOn = false }
-    }
-    // Keep the site's idle timer from signing out mid-sync: a small synthetic activity every 45 s.
-    androidx.compose.runtime.LaunchedEffect(running) {
-        while (running) {
-            kotlinx.coroutines.delay(45_000)
-            web.evaluateJavascript("['mousemove','keydown','scroll','touchstart'].forEach(function(t){try{document.dispatchEvent(new Event(t,{bubbles:true}));window.dispatchEvent(new Event(t));}catch(e){}});", null)
+            } finally { checking = false }
         }
     }
 
@@ -178,7 +156,7 @@ fun SyncScreen(onDone: () -> Unit) {
                 message.data?.let(caller::onMessage)
             }
         } else {
-            status = "גרסת WebView ישנה מדי. עדכנו את Android System WebView."
+            hint = "גרסת WebView ישנה מדי. עדכנו את Android System WebView."
         }
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
@@ -190,19 +168,28 @@ fun SyncScreen(onDone: () -> Unit) {
             }
 
             override fun onPageFinished(view: WebView, url: String) {
-                if (Uri.parse(url).host == "online.meuhedet.co.il") trySync()
+                if (Uri.parse(url).host == "online.meuhedet.co.il") handOffIfLoggedIn()
             }
         }
-        web.loadUrl(START_URL)
+        if (!handedOff) web.loadUrl(START_URL)
         onDispose { web.destroy() }
     }
 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxWidth().padding(12.dp)) {
-            Text(status, style = MaterialTheme.typography.bodyMedium)
-            if (running) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp))
-            if (finished) Button(onClick = onDone, modifier = Modifier.padding(top = 8.dp)) { Text("סיום") }
+            if (!handedOff) {
+                Text(hint, style = MaterialTheme.typography.bodyMedium)
+            } else {
+                Text(if (sync.running) "הסנכרון רץ ברקע. אפשר לנעול את הטלפון או לצאת מהאפליקציה." else sync.text,
+                    style = MaterialTheme.typography.titleMedium)
+                if (sync.running) {
+                    Text(sync.text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
+                    LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp))
+                }
+                if (sync.needsLogin) Button(onClick = { handedOff = false; web.loadUrl(START_URL) }, modifier = Modifier.padding(top = 8.dp)) { Text("התחברות מחדש") }
+                Button(onClick = onDone, modifier = Modifier.padding(top = 8.dp)) { Text("חזרה למסך הבית") }
+            }
         }
-        if (!finished) AndroidView(factory = { web }, modifier = Modifier.fillMaxSize())
+        if (!handedOff) AndroidView(factory = { web }, modifier = Modifier.fillMaxSize())
     }
 }

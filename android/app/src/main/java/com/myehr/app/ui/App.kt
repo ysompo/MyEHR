@@ -12,6 +12,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -35,6 +36,7 @@ enum class Tab(val label: String, val icon: Int) {
     LABS("בדיקות", R.drawable.ic_lab),
     ASK("שאלה", R.drawable.ic_ask),
     MEDS("תרופות", R.drawable.ic_pill),
+    VISITS("ביקורים", R.drawable.ic_calendar),
     DOCS("מסמכים", R.drawable.ic_doc),
 }
 
@@ -58,7 +60,8 @@ fun BottomBar(tab: Tab, onTab: (Tab) -> Unit) {
             NavigationBarItem(
                 selected = t == tab, onClick = { onTab(t) },
                 icon = { AppIcon(t.icon, null, tint = if (t == tab) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant) },
-                label = { Text(t.label, style = MaterialTheme.typography.labelMedium) },
+                label = { Text(t.label, style = MaterialTheme.typography.labelSmall, maxLines = 1) },
+                alwaysShowLabel = true,
                 colors = NavigationBarItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.primaryContainer),
             )
         }
@@ -83,6 +86,9 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
     // Once a day: is there a newer signed build?
     var update by remember { mutableStateOf<com.myehr.app.update.UpdateInfo?>(null) }
     androidx.compose.runtime.LaunchedEffect(Unit) { update = com.myehr.app.update.Updater.dailyCheck(context) }
+
+    val syncStatus by com.myehr.app.sync.SyncState.status.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(syncStatus.finishedAt) { if (syncStatus.finishedAt > 0) refresh++ }
 
     BackHandler(enabled = sub != null || tab != Tab.HOME) { if (sub != null) sub = null else tab = Tab.HOME }
 
@@ -113,6 +119,7 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
                             byTest, { byTest = it }, { sub = Sub.LabHistory(it.code) }, { sub = Sub.LabVisitDetail(it.stickerId) })
                         Tab.ASK -> AskScreen(person, askPrefill)
                         Tab.MEDS -> MedsScreen(load(emptyList(), id) { repo.activeMeds(id) }, load(emptyList(), id) { repo.prescriptions(id) }, load(emptyList(), id) { repo.purchases(id) })
+                        Tab.VISITS -> VisitsScreen(load(emptyList(), id, refresh) { repo.upcomingVisits(id) }, load(emptyList(), id, refresh) { repo.pastVisits(id) })
                         Tab.DOCS -> DocsScreen(load(emptyList(), id) { repo.documents(id) }, load(emptyList(), id) { repo.vaccines(id) }, load(emptyList(), id) { repo.examinations(id) })
                     }
                 }

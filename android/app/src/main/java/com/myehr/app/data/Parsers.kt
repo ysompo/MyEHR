@@ -197,4 +197,35 @@ object Parsers {
                 isEcg = o.bool("IsEKGResult") ?: false,
             )
         }.sortedByDescending { it.date ?: "" }
+
+    // ---------- visits ----------
+    /** Upcoming appointments (PersonalDashboardApi/Apponitments → Items[]). */
+    fun upcomingVisits(text: String?): List<Visit> =
+        parse(text).obj().list("Items").mapNotNull { e ->
+            val o = e.obj() ?: return@mapNotNull null
+            val start = o.str("AppointmentDateAndTime") ?: o.str("FromTime") ?: o.str("AppointmentDate")
+            val street = joinName(o.str("StreetName"), o.str("StreetNum"))
+            Visit(
+                start = start,
+                end = o.str("ToTime"),
+                specialty = o.str("SpecialityName"),
+                doctor = o.str("ProviderName"),
+                place = listOfNotNull(o.str("ClinicLocation"), street, o.str("City")).distinct().joinToString(", ").ifEmpty { null },
+                upcoming = true,
+            )
+        }.sortedBy { it.start ?: "" }
+
+    /** Past visits from the medical summary (medicalPassport → Appointments[]). */
+    fun pastVisits(passport: String?): List<Visit> =
+        parse(passport).obj().list("Appointments").mapNotNull { e ->
+            val o = e.obj() ?: return@mapNotNull null
+            Visit(
+                start = o.str("VisitTime") ?: o.str("VisitDate"),
+                end = null,
+                specialty = o.str("SpecialityName"),
+                doctor = joinName(o.str("ProviderFirstName"), o.str("ProviderLastName")),
+                place = o.str("LocationName"),
+                upcoming = false,
+            )
+        }.sortedByDescending { it.start ?: "" }
 }

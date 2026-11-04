@@ -71,4 +71,14 @@ class ParsersTest {
         assertEquals("01/05/2024", fmtDate("2024-05-01T08:30:00"))
         assertEquals("", fmtDate(null))
     }
+
+    @Test fun visits() {
+        val up = Parsers.upcomingVisits("""{"Items":[
+          {"AppointmentDateAndTime":"2030-02-01T09:30:00+02:00","ToTime":"2030-02-01T09:45:00","SpecialityName":"Spec","ProviderName":"Dr X","ClinicLocation":"Clinic","StreetName":"Street","StreetNum":"1","City":"Town"},
+          {"FromTime":"2030-01-01T08:00:00","SpecialityName":"Early"}]}""")
+        assertEquals(listOf("Early", "Spec"), up.map { it.specialty })
+        assertEquals("Clinic, Street 1, Town", up[1].place)
+        val past = Parsers.pastVisits("""{"Appointments":[{"VisitDate":"2020-01-01T00:00:00","ProviderFirstName":"A","ProviderLastName":"B","SpecialityName":"S","LocationName":"L"}]}""")
+        assertEquals("A B", past[0].doctor); assertFalse(past[0].upcoming)
+    }
 }

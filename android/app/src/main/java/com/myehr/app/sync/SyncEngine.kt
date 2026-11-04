@@ -50,6 +50,7 @@ object Api {
     const val VACCINES = "/umbraco/api/NursesApi/VaccinesData"
     const val EXAMS = "/api/ExaminationsApi/Search"
     const val PASSPORT = "/umbraco/api/PersonalInfoApi/medicalPassport"
+    const val APPOINTMENTS = "/umbraco/api/PersonalDashboardApi/Apponitments"
 
     // Files (PDF)
     fun labPdf(labCode: String, stickerId: String, yyyymmdd: String) = "/api/labs/$labCode/stickers/$stickerId/pdf/$yyyymmdd"
@@ -74,6 +75,7 @@ object Kind {
     const val VACCINES = "vaccines"
     const val EXAMS = "exams"
     const val PASSPORT = "passport"
+    const val APPOINTMENTS = "appointments"
     /** Bookkeeping: "1" while a lab-history refresh is still owed for this person. */
     const val STATE = "sync_state"
 }
@@ -181,6 +183,8 @@ class SyncEngine(
         json("GET", Api.VACCINES)?.let { sink.put(id, Kind.VACCINES, "", it) }
         json("POST", Api.EXAMS, range)?.let { sink.put(id, Kind.EXAMS, "", it) }
         json("GET", Api.PASSPORT)?.let { sink.put(id, Kind.PASSPORT, "", it) }
+        onProgress("תורים")
+        json("POST", Api.APPOINTMENTS)?.let { sink.put(id, Kind.APPOINTMENTS, "", it) }
 
         val done = person.copy(lastSync = System.currentTimeMillis())
         sink.putPerson(done)

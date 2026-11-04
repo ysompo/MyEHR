@@ -103,3 +103,13 @@ data class MedDocument(
 data class Vaccine(val date: String?, val name: String)
 
 data class Examination(val date: String?, val description: String, val institute: String?, val isEcg: Boolean)
+
+/** An appointment (upcoming) or a past visit. Times are local ISO strings from the site. */
+data class Visit(
+    val start: String?,
+    val end: String?,
+    val specialty: String?,
+    val doctor: String?,
+    val place: String?,
+    val upcoming: Boolean,
+)
