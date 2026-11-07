@@ -56,8 +56,8 @@ class SyncService : Service() {
                 val store = Store.get(this@SyncService)
                 val engine = SyncEngine(caller, store, onProgress = { progress(it) })
                 val people = engine.syncFamily(switcher)
-                done("הסנכרון הסתיים: ${people.joinToString(", ") { it.name }}")
-                SyncState.set(SyncState.Status(text = "הסנכרון הסתיים", finishedAt = System.currentTimeMillis()))
+                done("הסנכרון הסתיים: ${people.joinToString(", ") { it.name }}" + (if (engine.failures.isEmpty()) "" else " (חלק מהפריטים לא נטענו)"))
+                SyncState.set(SyncState.Status(text = "הסנכרון הסתיים" + SyncState.missing(engine.failures), finishedAt = System.currentTimeMillis()))
             } catch (e: SessionExpired) {
                 done("החיבור למאוחדת נותק. פתחו את MyEHR והתחברו שוב.")
                 SyncState.set(SyncState.Status(text = "יש להתחבר שוב", needsLogin = true))

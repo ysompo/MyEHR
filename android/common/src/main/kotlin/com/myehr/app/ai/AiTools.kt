@@ -121,6 +121,7 @@ class AiTools(private val data: AiData) {
         val json = buildJsonObject {
             put("name", s.name)
             put("unit", s.unit)
+            put("data_cautions", buildJsonArray { s.cautions().forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
             put("results", buildJsonArray {
                 s.points.forEach { p ->
                     add(buildJsonObject {

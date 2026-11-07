@@ -97,14 +97,33 @@ class SyncEngine(
     private val iso = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private fun isoDay(d: LocalDate) = d.atStartOfDay().atOffset(ZoneOffset.UTC).format(iso)
 
+    /** What could not be fetched in this run ("בדיקות מעבדה (אבא)"), shown to the user at the end. */
+    val failures = linkedSetOf<String>()
+    private var who = ""
+
+    private fun label(path: String) = when {
+        path.contains("Lab", true) || path.startsWith("/api/labs") -> "בדיקות מעבדה"
+        path.contains("medications") -> "תרופות"
+        path.contains("Communication") || path.contains("visits/") -> "מסמכים"
+        path.contains("Vaccines") -> "חיסונים"
+        path.contains("Examinations") -> "א.ק.ג ומכונים"
+        path.contains("medicalPassport") -> "ביקורים קודמים"
+        path.contains("Apponitments") -> "תורים"
+        path.contains("Personal/User") -> "בני משפחה"
+        else -> "פרטים"
+    }
+
     private suspend fun json(method: String, path: String, body: String? = null, okStatuses: Set<Int> = setOf(200)): String? {
-        val r = caller.call(method, path, body)
+        var r = caller.call(method, path, body)
+        // Asked to slow down: wait half a minute and try once more.
+        if (r.status == 429) { if (pauseMs > 0) delay(30_000L); r = caller.call(method, path, body) }
         // Signed out: an error code, or the request ended on the login site / sign-out page.
         if (r.status == 401 || r.status == 403 || r.url.contains("login.meuhedet", ignoreCase = true) || r.url.contains("AuthSurface/Signout", ignoreCase = true)) throw SessionExpired()
         if (r.contentType.contains("html", ignoreCase = true)) throw SessionExpired()
-        if (r.status !in okStatuses) return null
         if (pauseMs > 0) delay(pauseMs)
-        return r.text.takeIf { Parsers.parse(it) != null }
+        val ok = r.text.takeIf { r.status in okStatuses && Parsers.parse(it) != null }
+        if (ok == null && r.status != 404 && r.status != 409) failures += label(path) + (if (who.isNotEmpty()) " ($who)" else "")
+        return ok
     }
 
     /**
@@ -119,9 +138,10 @@ class SyncEngine(
             family.forEachIndexed { i, (guid, _, _) ->
                 onProgress("בן משפחה ${i + 1}/${family.size}")
                 switcher.select(guid)
-                val p = syncCurrent()
+                // One member failing (other than a lost session) doesn't stop the others.
+                val p = try { syncCurrent() } catch (e: SessionExpired) { throw e } catch (e: Exception) { failures += "בן משפחה ${i + 1}"; null }
                 // Guard: if the site ignored the switch we'd be re-reading the same person.
-                if (done.none { it.id == p.id }) done += p
+                if (p != null && done.none { it.id == p.id }) done += p
             }
         } finally {
             switcher.select(null)
@@ -134,6 +154,7 @@ class SyncEngine(
         val memberJson = json("GET", Api.MEMBER) ?: throw SessionExpired()
         val person = Parsers.person(memberJson) ?: throw SessionExpired()
         val id = person.id
+        who = person.name.substringBefore(' ')
         sink.put(id, Kind.MEMBER, "", memberJson)
 
         onProgress("בדיקות מעבדה")

@@ -62,6 +62,17 @@ data class LabSeries(
 ) {
     val unit: String? get() = points.firstNotNullOfOrNull { it.unit }
     val latest: LabPoint? get() = points.maxByOrNull { it.date ?: "" }
+
+    /** Things that make the graph misleading, in plain Hebrew; empty when there are none. */
+    fun cautions(): List<String> = buildList {
+        val text = points.count { it.value == null && !it.resultText.isNullOrBlank() }
+        if (text > 0) add("$text תוצאות הן טקסט ולא מספר, ולכן אינן בגרף.")
+        val units = points.mapNotNull { it.unit?.trim()?.takeIf(String::isNotEmpty) }.distinct()
+        if (units.size > 1) add("יחידת המדידה השתנתה (${units.joinToString(" / ")}). השוואה בין התקופות עלולה להטעות.")
+        val ranges = points.filter { it.normLow != null || it.normHigh != null }.map { it.normLow to it.normHigh }.distinct()
+        if (ranges.size > 1) add("הטווח התקין השתנה לאורך השנים. כל תוצאה נבדקת מול הטווח שלה; הרצועה מציגה את האחרון.")
+        if (points.any { it.source != null }) add("חלק מהתוצאות ממסמכים שהעליתם ממעבדות אחרות. שיטות מדידה שונות יכולות לתת ערכים שונים.")
+    }
 }
 
 data class Medication(

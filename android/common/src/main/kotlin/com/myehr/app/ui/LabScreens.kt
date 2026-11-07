@@ -155,6 +155,10 @@ fun LabSeriesScreen(series: LabSeries?, meds: List<com.myehr.app.ai.MedSummary> 
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = Space.l, end = Space.l, bottom = Space.l))
             }
+            series.cautions().forEach { c ->
+                Gap(Space.s)
+                Text("⚠ $c", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Gap()
             SectionTitle("כל התוצאות", Modifier.padding(horizontal = 0.dp))
         }

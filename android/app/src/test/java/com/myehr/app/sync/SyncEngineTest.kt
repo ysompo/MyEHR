@@ -46,6 +46,23 @@ class SyncEngineTest {
         assertEquals(1, sink.people.size)
     }
 
+    @Test fun oneFailedSectionIsReportedAndTheRestIsKept() = runTest {
+        val caller = Caller { _, path, _ ->
+            when {
+                path.startsWith(Api.MEMBER) -> ok("""{"Id":"000000001","FullName":"Test Person"}""")
+                path.startsWith(Api.MEDS_PURCHASED) -> Resp(500, "application/json", "{}", "")
+                path.startsWith(Api.VACCINES) -> Resp(0, "", "", "") // network error
+                else -> ok("{}")
+            }
+        }
+        val sink = Sink()
+        val engine = SyncEngine(caller, sink, today = LocalDate.of(2025, 1, 1), pauseMs = 0)
+        engine.syncCurrent()
+        assertEquals(listOf("תרופות (Test)", "חיסונים (Test)"), engine.failures.toList())
+        assertTrue(sink.raw.containsKey(Triple("000000001", Kind.MEDS_ACTIVE, "")))
+        assertTrue(sink.raw.containsKey(Triple("000000001", Kind.APPOINTMENTS, "")))
+    }
+
     @Test fun secondSyncFetchesOnlyNewResults() = runTest {
         var stickers = """{"Items":[{"StickerId":"11","LabCode":"2","TestDate":"2023-06-01T00:00:00"}]}"""
         val calls = mutableListOf<String>()

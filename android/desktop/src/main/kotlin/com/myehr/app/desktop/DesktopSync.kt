@@ -118,7 +118,7 @@ object DesktopSync {
         try {
             val engine = SyncEngine(DesktopCaller(), store, onProgress = { SyncState.set(SyncState.Status(running = true, text = it)) })
             val people = engine.syncFamily(MemberSwitcher { Session.selectMember(it) })
-            SyncState.set(SyncState.Status(text = "הסנכרון הסתיים: ${people.joinToString(", ") { it.name }}", finishedAt = System.currentTimeMillis()))
+            SyncState.set(SyncState.Status(text = "הסנכרון הסתיים: ${people.joinToString(", ") { it.name }}" + SyncState.missing(engine.failures), finishedAt = System.currentTimeMillis()))
         } catch (e: SessionExpired) {
             SyncState.set(SyncState.Status(text = "החיבור למאוחדת נותק. התחברו שוב.", needsLogin = true))
         } catch (e: Exception) {

@@ -108,9 +108,12 @@ object Parsers {
         val o = parse(text).obj() ?: return null
         val points = o.list("Items").map { e ->
             val i = e.obj()
+            val text = i.str("Result")
+            // A text answer ("negative", "see note") may come with TestValue 0: that 0 is not a measurement.
+            val textOnly = text != null && text.replace(",", ".").trim().toDoubleOrNull() == null && (i.num("TestValue") ?: 0.0) == 0.0
             LabPoint(
                 date = i.str("TestDate"),
-                value = i.num("TestValue") ?: i.num("Result"),
+                value = if (textOnly) null else i.num("TestValue") ?: i.num("Result"),
                 resultText = i.str("Result"),
                 unit = i.str("MeasureUnit"),
                 normLow = i.num("NormFrom"),

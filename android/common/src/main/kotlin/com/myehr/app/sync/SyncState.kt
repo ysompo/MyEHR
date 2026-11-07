@@ -9,5 +9,9 @@ object SyncState {
     private val _status = MutableStateFlow(Status())
     val status: StateFlow<Status> = _status
     fun set(s: Status) { _status.value = s }
+
+    /** "\nלא נטענו הפעם: תרופות (אבא) ..." or "" when everything was fetched. */
+    fun missing(failures: Collection<String>) =
+        if (failures.isEmpty()) "" else "\nלא נטענו הפעם: ${failures.joinToString(", ")}. אפשר לנסות שוב מאוחר יותר."
 }
 
