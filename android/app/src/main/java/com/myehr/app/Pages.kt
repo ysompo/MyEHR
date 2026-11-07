@@ -122,3 +122,21 @@ fun AndroidPageView(page: Page, modifier: Modifier) {
         images.forEach { Image(it, null, Modifier.fillMaxWidth().padding(bottom = 8.dp), contentScale = ContentScale.FillWidth) }
     }
 }
+
+/** Save-as through the system's file picker (Downloads, Drive, ...). */
+@Composable
+fun rememberAndroidSaver(onResult: (Boolean) -> Unit): (String, ByteArray) -> Unit {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val pending = remember { arrayOfNulls<ByteArray>(1) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        ExternalPick.since = 0L
+        val bytes = pending[0]; pending[0] = null
+        if (uri == null || bytes == null) onResult(false)
+        else scope.launch {
+            val ok = withContext(Dispatchers.IO) { runCatching { ctx.contentResolver.openOutputStream(uri)!!.use { it.write(bytes) } }.isSuccess }
+            onResult(ok)
+        }
+    }
+    return remember { { name, bytes -> pending[0] = bytes; ExternalPick.since = System.currentTimeMillis(); launcher.launch(name) } }
+}

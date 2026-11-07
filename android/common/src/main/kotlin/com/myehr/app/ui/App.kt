@@ -40,6 +40,7 @@ private sealed interface Sub {
     data class LabVisitDetail(val stickerId: String) : Sub
     data class LabHistory(val code: String) : Sub
     data object AddDoc : Sub
+    data object Export : Sub
     data class ViewFile(val fileId: String, val title: String) : Sub
     data class ViewUpload(val id: String) : Sub
 }
@@ -92,7 +93,7 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
         Column(Modifier.padding(pad).fillMaxSize()) {
             when (val s = sub) {
                 Sub.Sync -> { SubHeader("סנכרון ממאוחדת") { sub = null }; platform.SyncContent(onDone = { refresh++; sub = null }) }
-                Sub.Settings -> { SubHeader("הגדרות") { sub = null }; SettingsScreen(textSize, onTextSize, look, onLook, hasKey) { secrets.apiKey = null; hasKey = false } }
+                Sub.Settings -> { SubHeader("הגדרות") { sub = null }; SettingsScreen(textSize, onTextSize, look, onLook, hasKey, { secrets.apiKey = null; hasKey = false }, onExport = { sub = Sub.Export }) }
                 is Sub.LabVisitDetail -> { SubHeader("תוצאות בדיקה") { sub = null }
                     if (person != null) {
                         val fid = com.myehr.app.sync.meuhedetFileId(person.id, "lab", s.stickerId)
@@ -103,6 +104,7 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
                 is Sub.ViewFile -> { SubHeader(s.title) { sub = null }
                     val bytes = load<ByteArray?>(null, s) { platform.files.get(s.fileId) }
                     if (bytes != null) androidx.compose.foundation.lazy.LazyColumn { item { platform.PageView(com.myehr.app.data.Page(bytes, "application/pdf"), Modifier.padding(Space.s)) } } }
+                Sub.Export -> { SubHeader("ייצוא התיק") { sub = Sub.Settings }; if (person != null) ExportScreen(people, person) }
                 Sub.AddDoc -> { SubHeader("הוספת מסמך") { sub = null }; if (person != null) AddDocScreen(people, person) { refresh++; sub = null } }
                 is Sub.ViewUpload -> { SubHeader("מסמך שהעליתם") { sub = null }
                     if (person != null) UploadView(person.id, load(null, s, person.id) { repo.upload(person.id, s.id) }) { refresh++; sub = null } }

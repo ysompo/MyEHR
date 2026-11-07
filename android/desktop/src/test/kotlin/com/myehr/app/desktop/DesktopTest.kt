@@ -71,6 +71,17 @@ class DesktopTest {
         assertTrue(repo.labSeries(id).any { it.name == "Vitamin D" })
         assertEquals(1, repo.dashboard(s.people(), s.people().first { it.id == id }).conditions.size)
 
+        // Export: an AES ZIP that opens only with the password and holds the summary and the README.
+        val zipFile = File(f.parentFile, "export-test.zip").apply { writeBytes(com.myehr.app.data.Exporter.build(repo, DesktopVault(File(f.parentFile, "vault-test")) { ByteArray(32) }, s.people().first { it.id == id }, "password1".toCharArray())) }
+        val zf = net.lingala.zip4j.ZipFile(zipFile, "password1".toCharArray())
+        assertTrue(zf.fileHeaders.all { it.isEncrypted })
+        val names = zf.fileHeaders.map { it.fileName }
+        assertTrue(names.containsAll(listOf("README.md", "summary.md", "labs.json", "conditions.json")))
+        val summary = zf.getInputStream(zf.getFileHeader("summary.md")).readBytes().decodeToString()
+        assertTrue(summary.contains("פניצילין") && summary.contains("Vitamin D"))
+        assertFalse(zipFile.readBytes().toString(Charsets.ISO_8859_1).contains("פניצילין"))
+        File("build/demo").mkdirs(); File("build/demo/summary.md").writeText(summary)
+
         PlatformFonts.family = DesktopPlatform.rubik
         val platform = DesktopPlatform(makeStore = { s }, makeVault = { DesktopVault(File(f.parentFile, "vault-test")) { ByteArray(32) } })
         renderTo("desktop_adddoc.png", platform) { com.myehr.app.ui.AddDocScreen(s.people(), s.people().first { it.id == id }) {} }

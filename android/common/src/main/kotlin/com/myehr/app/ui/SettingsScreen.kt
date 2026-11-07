@@ -24,7 +24,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.selection.selectable
 
 @Composable
-fun SettingsScreen(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look, onLook: (Look) -> Unit, hasApiKey: Boolean, onClearApiKey: () -> Unit) {
+fun SettingsScreen(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look, onLook: (Look) -> Unit, hasApiKey: Boolean, onClearApiKey: () -> Unit, onExport: () -> Unit = {}) {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = Space.xl)) {
         SectionTitle("גודל טקסט")
         SoftCard(Modifier.fillMaxWidth().padding(horizontal = Space.l)) {
@@ -60,6 +60,11 @@ fun SettingsScreen(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Loo
         SoftCard(Modifier.fillMaxWidth().padding(horizontal = Space.l)) {
             CardRow("מפתח API", if (hasApiKey) "שמור ומוצפן בטלפון" else "לא הוגדר", divider = false,
                 trailing = { if (hasApiKey) TextButton(onClick = onClearApiKey) { Text("מחיקה") } })
+        }
+
+        SectionTitle("ייצוא")
+        SoftCard(Modifier.fillMaxWidth().padding(horizontal = Space.l)) {
+            CardRow("ייצוא התיק לקובץ מוצפן", "לרופא פרטי, לחו\"ל או לעוזר AI", onClick = onExport, divider = false)
         }
 
         SectionTitle("עדכונים")

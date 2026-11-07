@@ -85,3 +85,13 @@ fun DesktopPageView(page: Page, modifier: Modifier) {
         images.forEach { Image(it, null, Modifier.fillMaxWidth().padding(bottom = 8.dp), contentScale = ContentScale.FillWidth) }
     }
 }
+
+/** Save-as dialog. */
+@Composable
+fun rememberDesktopSaver(onResult: (Boolean) -> Unit): (String, ByteArray) -> Unit = remember {
+    { name, bytes ->
+        val d = FileDialog(null as Frame?, "שמירת קובץ", FileDialog.SAVE).apply { file = name; isVisible = true }
+        val dir = d.directory; val f = d.file
+        onResult(if (dir == null || f == null) false else runCatching { File(dir, f).writeBytes(bytes) }.isSuccess)
+    }
+}

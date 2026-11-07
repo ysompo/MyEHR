@@ -105,7 +105,7 @@ class DemoScreens {
         Screen(Tab.LABS) { LabsScreen(all, listOf(LabVisit("1", "2", "2025-08-11T08:00:00", "ד\"ר לדוגמה", "מעבדה לדוגמה")), true, {}, {}, {}) }
     }
     @Test fun f_ask() = shot("f_ask") { Screen(Tab.ASK) { AskScreen(me, "איך השתנה הכולסטרול מאז שהתחלתי סטטין?") } }
-    @Test fun g_settings() = shot("g_settings") { Screen(null) { SubHeader("הגדרות") {}; SettingsScreen(TextSize.LARGE, {}, PineLook, {}, true) {} } }
+    @Test fun g_settings() = shot("g_settings") { Screen(null) { SubHeader("הגדרות") {}; SettingsScreen(TextSize.LARGE, {}, PineLook, {}, true, {}) } }
     @Test fun i_visits() = shot("i_visits") {
         Screen(Tab.VISITS) {
             com.myehr.app.ui.VisitsScreen(

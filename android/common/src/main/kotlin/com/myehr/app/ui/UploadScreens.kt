@@ -257,3 +257,54 @@ fun parseDate(s: String): String? {
     }
     return Regex("""\d{4}-\d{2}-\d{2}""").find(t)?.value
 }
+
+/** Export one person's records as an encrypted ZIP, for a doctor or an AI assistant. */
+@Composable
+fun ExportScreen(people: List<Person>, initial: Person) {
+    val platform = LocalPlatform.current
+    val scope = rememberCoroutineScope()
+    var target by remember { mutableStateOf(initial) }
+    var pass by remember { mutableStateOf("") }
+    var pass2 by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<String?>(null) }
+    val save = platform.rememberSaver { ok -> busy = false; result = if (ok) "הקובץ נשמר." else "הקובץ לא נשמר." }
+    LazyColumn(contentPadding = PaddingValues(Space.l)) {
+        item {
+            Text("קובץ ZIP אחד עם כל התיק: סיכום לרופא, בדיקות, תרופות, אבחנות, ביקורים וקובצי PDF, " +
+                "והוראות לעוזר AI (Claude, ChatGPT) שיקרא אותו.", style = MaterialTheme.typography.bodyLarge)
+            Gap()
+            if (people.size > 1) {
+                Text("של מי?", style = MaterialTheme.typography.titleSmall)
+                @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(Space.s)) {
+                    people.forEach { p -> FilterChip(selected = p.id == target.id, onClick = { target = p }, label = { Text(p.name) }) }
+                }
+                Gap(Space.m)
+            }
+            OutlinedTextField(pass, { pass = it }, label = { Text("סיסמה לקובץ (8 תווים לפחות)") }, singleLine = true,
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(pass2, { pass2 = it }, label = { Text("שוב את הסיסמה") }, singleLine = true,
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            Gap(Space.m)
+            SoftCard(Modifier.fillMaxWidth()) {
+                Text("הקובץ מוצפן (AES-256). לפתיחה: 7-Zip ב-Windows, Keka ב-Mac. מסרו את הסיסמה בנפרד מהקובץ. " +
+                    "מי שפותח אותו (או שירות AI שמעלים אליו את התיקייה) יכול לקרוא את כל המידע.",
+                    style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(Space.l))
+            }
+            Gap()
+            if (pass.isNotEmpty() && pass != pass2) Text("הסיסמאות אינן זהות.", color = MaterialTheme.colorScheme.error)
+            result?.let { Text(it) }
+            Button(enabled = !busy && pass.length >= 8 && pass == pass2, onClick = {
+                busy = true; result = null
+                scope.launch {
+                    val bytes = withContext(Dispatchers.IO) {
+                        runCatching { com.myehr.app.data.Exporter.build(platform.repo, platform.files, target, pass.toCharArray()) }.getOrNull()
+                    }
+                    if (bytes == null) { busy = false; result = "יצירת הקובץ נכשלה." }
+                    else save(com.myehr.app.data.Exporter.fileName(java.time.LocalDate.now()), bytes)
+                }
+            }) { Text(if (busy) "יוצר קובץ…" else "יצירת קובץ ושמירה") }
+        }
+    }
+}

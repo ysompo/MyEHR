@@ -73,6 +73,7 @@ dependencies {
     implementation("net.zetetic:sqlcipher-android:4.6.1@aar")
     implementation("androidx.sqlite:sqlite:2.4.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    implementation("net.lingala.zip4j:zip4j:2.11.5")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("com.anthropic:anthropic-java:3.2.0")

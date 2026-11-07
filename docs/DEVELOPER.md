@@ -62,6 +62,12 @@ Endpoints and fields: [SITE_MAP.md](SITE_MAP.md). If the site changes, re-record
 - `Repo.mergeUploads` adds uploaded lab values to the Meuhedet series with the same code or name; a value on a day Meuhedet already has is dropped. `LabPoint.source` / `MedSummary.source` mark where a value came from; the AI sees only "Meuhedet" or "uploaded document".
 - Pages are viewed in-app: `PdfRenderer` on Android, PDFBox on desktop.
 
+### Files and export
+- `SyncEngine.savePdfs` downloads lab-result and document PDFs not yet in the vault (`Caller.file`; raw PDF or base64 in JSON). Vault ids are hashes (`meuhedetFileId`).
+- `SyncEngine.failures` lists sections that failed; the rest of the sync continues. HTTP 429 → wait 30 s, retry once.
+- `LabSeries.cautions()` flags text-only results, unit changes, range changes and values from other labs (shown on the trend screen and sent to the AI).
+- `data/Exporter.kt` builds an AES-256 ZIP (zip4j): README for an AI reader, `summary.md`, JSON per section, `files/`.
+
 ### App lock
 - Android: `BiometricPrompt` (biometric or device credential) on every start; `FLAG_SECURE` blocks screenshots.
 - Desktop: app password, stored as a salted PBKDF2 hash (210k iterations) in the keychain.
@@ -106,6 +112,6 @@ Keep a safe copy of the keystore. Never commit it. Without the secrets, CI build
 The desktop installers are not code-signed, so Windows and macOS show an "unknown developer" warning.
 
 ## Not done yet
-- Opening PDFs inside the app (file URLs are in the site map).
-- Encrypted backup export / import.
+- Restoring from an export (import).
+- ECG / institute files, referrals, letters, hospital stays (endpoints not recorded yet).
 - Prescription file URL, diagnoses and sensitivities (not found on the site yet).

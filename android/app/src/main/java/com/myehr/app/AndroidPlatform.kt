@@ -78,6 +78,8 @@ class AndroidPlatform(private val context: Context) : Platform {
 
     @Composable override fun UpdateSection() = com.myehr.app.update.UpdateSection()
 
+    @Composable override fun rememberSaver(onResult: (Boolean) -> Unit) = rememberAndroidSaver(onResult)
+
     @Composable override fun rememberPicker(onPages: (List<com.myehr.app.data.Page>) -> Unit) = rememberAndroidPicker(onPages)
 
     @Composable override fun PageView(page: com.myehr.app.data.Page, modifier: androidx.compose.ui.Modifier) = AndroidPageView(page, modifier)

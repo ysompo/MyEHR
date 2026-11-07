@@ -52,6 +52,8 @@ class DesktopPlatform(makeStore: () -> DesktopStore = { DesktopStore() }, makeVa
     override val secrets: SecretStore = DesktopSecrets
     override val files by lazy(makeVault)
 
+    @Composable override fun rememberSaver(onResult: (Boolean) -> Unit) = rememberDesktopSaver(onResult)
+
     @Composable override fun rememberPicker(onPages: (List<com.myehr.app.data.Page>) -> Unit) = rememberDesktopPicker(onPages)
 
     @Composable override fun PageView(page: com.myehr.app.data.Page, modifier: Modifier) = DesktopPageView(page, modifier)

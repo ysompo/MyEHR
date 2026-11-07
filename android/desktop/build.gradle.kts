@@ -29,6 +29,7 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    implementation("net.lingala.zip4j:zip4j:2.11.5")
     implementation("org.apache.pdfbox:pdfbox:3.0.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.10.2")
     implementation("com.anthropic:anthropic-java:3.2.0")

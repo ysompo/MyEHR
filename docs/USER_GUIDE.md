@@ -31,6 +31,8 @@
 4. When it finishes, the app signs out of Meuhedet.
 
 The first sync takes a while. Later syncs only fetch what is new.
+Meuhedet's PDFs (lab results, documents) are saved too, encrypted, and open inside the app.
+If some items could not be fetched, the end message lists them; everything else is kept. Sync again later to fill them in.
 If Meuhedet ends the session in the middle, log in again; the sync continues from where it stopped.
 
 ## 4. Tabs
@@ -72,11 +74,19 @@ What happens:
 On the Home screen, under **אבחנות, רגישויות והערות**: tap **+ הוספה** to add one, or tap an item to edit or delete it.
 The question tab can use them (it asks first). Your notes are treated as your own words, not as medical records.
 
+## 5c. Export for a doctor or an AI assistant
+**Settings → ייצוא התיק** (export). Choose the person and a password (8+ characters).
+You get one encrypted ZIP file with a one-page summary for a doctor, all results, medications, diagnoses, visits, PDFs,
+and instructions for an AI assistant (Claude, ChatGPT) that reads the folder.
+- Open it with 7-Zip (Windows) or Keka (Mac). Give the password separately from the file.
+- Anyone with the file and password, or an AI service you upload it to, can read everything in it.
+
 ## 6. Settings
 - **Text size:** normal, large, extra large.
 - **Colors:** Pine, Ocean, Olive or High contrast. Light/dark follows your device.
 - **API key** for questions.
 - **Updates:** **בדיקת עדכונים** (check for updates).
+- **Export:** see 5c.
 
 ## 7. Updates
 - The app checks once a day and shows a banner when a new version is available.
