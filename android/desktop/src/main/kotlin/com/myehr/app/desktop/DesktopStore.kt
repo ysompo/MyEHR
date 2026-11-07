@@ -44,15 +44,26 @@ fun keychainDataKey(): ByteArray {
 /** AES-256-GCM for every stored value. */
 private class Crypto(rawKey: ByteArray) {
     private val key = SecretKeySpec(rawKey, "AES")
-    fun enc(text: String): ByteArray {
+    fun encBytes(plain: ByteArray): ByteArray {
         val iv = ByteArray(12).also { SecureRandom().nextBytes(it) }
         val c = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(128, iv)) }
-        return iv + c.doFinal(text.toByteArray())
+        return iv + c.doFinal(plain)
     }
-    fun dec(blob: ByteArray): String {
+    fun decBytes(blob: ByteArray): ByteArray {
         val c = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, blob, 0, 12)) }
-        return String(c.doFinal(blob, 12, blob.size - 12))
+        return c.doFinal(blob, 12, blob.size - 12)
     }
+    fun enc(text: String): ByteArray = encBytes(text.toByteArray())
+    fun dec(blob: ByteArray): String = String(decBytes(blob))
+}
+
+/** Uploaded documents and saved PDFs: one AES-GCM encrypted file each, under the app folder. */
+class DesktopVault(private val dir: File = File(appDir, "files"), dataKey: () -> ByteArray = ::keychainDataKey) : com.myehr.app.data.FileVault {
+    private val crypto by lazy { Crypto(dataKey()) }
+    private fun f(id: String) = File(dir.apply { mkdirs() }, id.filter { it.isLetterOrDigit() || it == '_' || it == '-' })
+    override fun put(id: String, bytes: ByteArray) = f(id).writeBytes(crypto.encBytes(bytes))
+    override fun get(id: String): ByteArray? = f(id).takeIf { it.exists() }?.let { crypto.decBytes(it.readBytes()) }
+    override fun delete(id: String) { f(id).delete() }
 }
 
 /** Encrypted local store, same layout as the Android one. */
@@ -106,6 +117,12 @@ class DesktopStore(file: File = File(appDir, "myehr.db"), dataKey: () -> ByteArr
             it.setString(1, person); it.setString(2, kind)
             it.executeQuery().use { r -> buildMap { while (r.next()) put(r.getString(1), crypto.dec(r.getBytes(2))) } }
         }
+
+    @Synchronized override fun delete(person: String, kind: String, key: String) {
+        db.prepareStatement("DELETE FROM raw WHERE person=? AND kind=? AND k=?").use {
+            it.setString(1, person); it.setString(2, kind); it.setString(3, key); it.executeUpdate()
+        }
+    }
 
     @Synchronized fun logAi(person: String, question: String, sent: String, answer: String) {
         db.prepareStatement("INSERT INTO ai_log (at, person, data) VALUES (?, ?, ?)").use {

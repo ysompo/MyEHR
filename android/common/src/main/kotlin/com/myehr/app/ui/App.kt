@@ -39,6 +39,8 @@ private sealed interface Sub {
     data object Settings : Sub
     data class LabVisitDetail(val stickerId: String) : Sub
     data class LabHistory(val code: String) : Sub
+    data object AddDoc : Sub
+    data class ViewUpload(val id: String) : Sub
 }
 
 @Composable
@@ -91,7 +93,10 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
                 Sub.Sync -> { SubHeader("סנכרון ממאוחדת") { sub = null }; platform.SyncContent(onDone = { refresh++; sub = null }) }
                 Sub.Settings -> { SubHeader("הגדרות") { sub = null }; SettingsScreen(textSize, onTextSize, look, onLook, hasKey) { secrets.apiKey = null; hasKey = false } }
                 is Sub.LabVisitDetail -> { SubHeader("תוצאות בדיקה") { sub = null }; LabDetailScreen(load(null, s, person?.id) { person?.let { repo.labDetail(it.id, s.stickerId) } }) }
-                is Sub.LabHistory -> { SubHeader("מגמה לאורך זמן") { sub = null }; LabSeriesScreen(load(null, s, person?.id) { person?.let { repo.series(it.id, s.code) } }, load(emptyList(), person?.id) { person?.let { repo.aiData(it.id).medications() } ?: emptyList() }) }
+                Sub.AddDoc -> { SubHeader("הוספת מסמך") { sub = null }; if (person != null) AddDocScreen(people, person) { refresh++; sub = null } }
+                is Sub.ViewUpload -> { SubHeader("מסמך שהעליתם") { sub = null }
+                    if (person != null) UploadView(person.id, load(null, s, person.id) { repo.upload(person.id, s.id) }) { refresh++; sub = null } }
+                is Sub.LabHistory -> { SubHeader("מגמה לאורך זמן") { sub = null }; LabSeriesScreen(load(null, s, person?.id, refresh) { person?.let { repo.series(it.id, s.code) } }, load(emptyList(), person?.id) { person?.let { repo.aiData(it.id).medications() } ?: emptyList() }) }
                 null -> {
                     if (person == null) {
                         if (tab == Tab.HOME) Welcome { sub = Sub.Sync } else Empty()
@@ -103,14 +108,15 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
                             platform.UpdateBanner()
                             val d = load(null, id, refresh) { repo.dashboard(people, person) }
                             if (d != null) Dashboard(d, onPerson = { personId = it }, onAsk = { askPrefill = it; tab = Tab.ASK },
-                                onSeries = { sub = Sub.LabHistory(it) }, onSync = { sub = Sub.Sync }, onSettings = { sub = Sub.Settings })
+                                onSeries = { sub = Sub.LabHistory(it) }, onSync = { sub = Sub.Sync }, onSettings = { sub = Sub.Settings }, onConditionsChanged = { refresh++ })
                         }
-                        Tab.LABS -> LabsScreen(load(emptyList(), id) { repo.labSeries(id) }, load(emptyList(), id) { repo.labVisits(id) },
+                        Tab.LABS -> LabsScreen(load(emptyList(), id, refresh) { repo.labSeries(id) }, load(emptyList(), id) { repo.labVisits(id) },
                             byTest, { byTest = it }, { sub = Sub.LabHistory(it.code) }, { sub = Sub.LabVisitDetail(it.stickerId) })
                         Tab.ASK -> AskScreen(person, askPrefill)
-                        Tab.MEDS -> MedsScreen(load(emptyList(), id) { repo.activeMeds(id) }, load(emptyList(), id) { repo.prescriptions(id) }, load(emptyList(), id) { repo.purchases(id) })
+                        Tab.MEDS -> MedsScreen(load(emptyList(), id) { repo.activeMeds(id) }, load(emptyList(), id) { repo.prescriptions(id) }, load(emptyList(), id) { repo.purchases(id) }, load(emptyList(), id, refresh) { repo.uploadedMeds(id) })
                         Tab.VISITS -> VisitsScreen(load(emptyList(), id, refresh) { repo.upcomingVisits(id) }, load(emptyList(), id, refresh) { repo.pastVisits(id) })
-                        Tab.DOCS -> DocsScreen(load(emptyList(), id) { repo.documents(id) }, load(emptyList(), id) { repo.vaccines(id) }, load(emptyList(), id) { repo.examinations(id) })
+                        Tab.DOCS -> DocsScreen(load(emptyList(), id) { repo.documents(id) }, load(emptyList(), id) { repo.vaccines(id) }, load(emptyList(), id) { repo.examinations(id) },
+                            load(emptyList(), id, refresh) { repo.uploads(id) }, onAdd = { sub = Sub.AddDoc }, onOpen = { sub = Sub.ViewUpload(it.id) })
                     }
                 }
             }

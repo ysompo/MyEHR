@@ -28,7 +28,10 @@ Rules:
 - For medication effects, compare results before and after the start date, and say clearly that a change over time
   does not prove the medication caused it.
 - Do not diagnose or recommend treatment. When a result is out of range or a change looks important, suggest asking their doctor.
-- If the data needed is not available, say so plainly.
+- If the data needed is not available, say so plainly. Missing data is not proof something never happened:
+  the records hold only what Meuhedet's site shows and what the person uploaded.
+- Say where each fact comes from and its date: "Meuhedet" or "an uploaded document" (e.g. "LDL 120, 03/2024, uploaded document").
+- The person's own notes are their word, not a record. If a note and a record disagree, show both with their dates.
 """.trimIndent()
 
 /** One question → answer. Tool calls run on the phone; [beforeSend] is the consent + guard hook. */

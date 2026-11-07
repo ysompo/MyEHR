@@ -3,12 +3,14 @@ package com.myehr.app.data
 import com.myehr.app.ai.AiData
 import com.myehr.app.ai.MedSummary
 import com.myehr.app.sync.Kind
+import kotlinx.serialization.decodeFromString
 
 /** Reads raw answers from the store and parses them for the screens. */
 /** Read access to the stored raw answers (Android: SQLCipher; desktop: encrypted SQLite). */
 interface RecordStore : com.myehr.app.sync.RawSink {
     fun people(): List<Person>
     fun all(person: String, kind: String): Map<String, String>
+    fun delete(person: String, kind: String, key: String)
 }
 
 private fun RecordStore.get(person: String, kind: String): String? = get(person, kind, "")
@@ -17,10 +19,33 @@ class Repo(private val store: RecordStore) {
     fun people() = store.people()
     fun labVisits(p: String) = Parsers.labVisits(store.get(p, Kind.LAB_LIST))
     fun labDetail(p: String, stickerId: String) = Parsers.labDetail(store.get(p, Kind.LAB_DETAIL, stickerId))
+    /** Meuhedet's lab series with values from uploaded documents merged in (Meuhedet wins on the same day). */
     fun labSeries(p: String): List<LabSeries> =
-        store.all(p, Kind.LAB_HISTORY).mapNotNull { (code, json) -> Parsers.labSeries(code, json) }
+        mergeUploads(store.all(p, Kind.LAB_HISTORY).mapNotNull { (code, json) -> Parsers.labSeries(code, json) }, uploads(p))
             .sortedBy { it.name }
-    fun series(p: String, code: String) = Parsers.labSeries(code, store.get(p, Kind.LAB_HISTORY, code))
+    fun series(p: String, code: String) = labSeries(p).firstOrNull { it.code == code }
+
+    // ---- Uploaded documents, diagnoses, allergies and notes ----
+    fun uploads(p: String): List<Upload> = store.all(p, UpKind.UPLOAD).values
+        .mapNotNull { runCatching { upJson.decodeFromString<Upload>(it) }.getOrNull() }
+        .sortedByDescending { it.date ?: "" }
+    fun upload(p: String, id: String): Upload? = uploads(p).firstOrNull { it.id == id }
+    fun saveUpload(p: String, u: Upload) = store.put(p, UpKind.UPLOAD, u.id, u.toJson())
+    fun deleteUpload(p: String, u: Upload, vault: FileVault) {
+        u.mimes.indices.forEach { vault.delete(u.pageId(it)) }
+        conditions(p).filter { it.uploadId == u.id }.forEach { deleteCondition(p, it.id) }
+        store.delete(p, UpKind.UPLOAD, u.id)
+    }
+    fun conditions(p: String): List<Condition> = store.all(p, UpKind.CONDITION).values
+        .mapNotNull { runCatching { upJson.decodeFromString<Condition>(it) }.getOrNull() }
+        .sortedWith(compareBy<Condition> { it.type }.thenByDescending { it.date ?: "" })
+    fun saveCondition(p: String, c: Condition) = store.put(p, UpKind.CONDITION, c.id, c.toJson())
+    fun deleteCondition(p: String, id: String) = store.delete(p, UpKind.CONDITION, id)
+    fun uploadedMeds(p: String): List<Pair<UpMed, Upload>> = uploads(p).flatMap { u -> u.meds.map { it to u } }
+
+    /** Test codes and names this person already has, so a document's tests can be linked to them. */
+    fun knownTests(p: String): List<Pair<String, String>> =
+        store.all(p, Kind.LAB_HISTORY).mapNotNull { (code, json) -> Parsers.labSeries(code, json)?.let { code to it.name } }
     fun activeMeds(p: String) = Parsers.activeMeds(store.get(p, Kind.MEDS_ACTIVE))
     fun prescriptions(p: String) = Parsers.prescriptions(store.get(p, Kind.MEDS_PRESCRIPTIONS))
     fun purchases(p: String) = Parsers.purchases(store.get(p, Kind.MEDS_PURCHASED))
@@ -40,7 +65,8 @@ class Repo(private val store: RecordStore) {
             purchases(p).flatMap { listOf(it.doctor, it.pharmacy) } +
             prescriptions(p).map { it.doctor } +
             documents(p).map { it.doctor } +
-            examinations(p).map { it.institute }
+            examinations(p).map { it.institute } +
+            uploads(p).map { it.source }
 
     fun dashboard(people: List<Person>, person: Person): com.myehr.app.ui.DashboardData {
         val all = labSeries(person.id)
@@ -50,6 +76,7 @@ class Repo(private val store: RecordStore) {
             flagged = byRecent.filter { it.latest?.outOfRange == true }.take(6),
             latest = byRecent.take(6),
             meds = aiData(person.id).medications().filter { it.active },
+            conditions = conditions(person.id),
         )
     }
 
@@ -60,15 +87,45 @@ class Repo(private val store: RecordStore) {
             val bought = purchases(p).groupBy { it.name }
             val active = activeMeds(p)
             val names = (bought.keys + active.map { it.name } + prescriptions(p).flatMap { it.medicines }).distinct()
-            return names.map { n ->
+            val fromMeuhedet = names.map { n ->
                 val dates = bought[n].orEmpty().mapNotNull { it.date }.sorted()
                 val a = active.firstOrNull { it.name == n }
                 MedSummary(n, dates.firstOrNull(), dates.lastOrNull(), dates.size, a != null, a?.permanent ?: false)
-            }.sortedBy { it.firstPurchase ?: "9999" }
+            }
+            // From uploaded documents: the document's start date (or its date) is the start.
+            val fromDocs = uploadedMeds(p).filter { (m, _) -> fromMeuhedet.none { sameTestName(it.name, m.name) } }
+                .groupBy { it.first.name }.map { (n, list) ->
+                    val starts = list.mapNotNull { (m, u) -> m.start ?: u.date }.sorted()
+                    MedSummary(n, starts.firstOrNull(), list.mapNotNull { (m, u) -> m.end ?: m.start ?: u.date }.maxOrNull(), 0,
+                        active = false, permanent = false, source = list.first().second.source ?: "מסמך שהועלה")
+                }
+            return (fromMeuhedet + fromDocs).sortedBy { it.firstPurchase ?: "9999" }
         }
+        override fun conditions() = this@Repo.conditions(p)
         override fun age(): Int? = (memberJson(p) as? kotlinx.serialization.json.JsonObject)
             ?.get("Age")?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()?.toInt() }
     }
+}
+
+/**
+ * Adds uploaded lab values to the series: to the Meuhedet test with the same code or name, or to a new series.
+ * A value on a day Meuhedet already has for that test is the same result: Meuhedet's is kept.
+ */
+fun mergeUploads(series: List<LabSeries>, uploads: List<Upload>): List<LabSeries> {
+    val out = series.associateBy { it.code }.toMutableMap()
+    uploads.sortedBy { it.addedAt }.forEach { u ->
+        u.labs.forEach { l ->
+            val date = (l.date ?: u.date)?.take(10) ?: return@forEach
+            val target = out[l.code] ?: out.values.firstOrNull { sameTestName(it.name, l.name) }
+            val code = target?.code ?: "up:" + l.name.lowercase().filter { it.isLetterOrDigit() }
+            val existing = target ?: out[code]
+            if (existing?.points?.any { it.date?.take(10) == date } == true) return@forEach
+            val v = l.value?.replace(",", ".")?.trim()?.toDoubleOrNull()
+            val point = LabPoint("${date}T00:00:00", v, l.value, l.unit ?: existing?.unit, l.low, l.high, null, u.source ?: "מסמך שהועלה")
+            out[code] = LabSeries(code, existing?.name ?: l.name, ((existing?.points ?: emptyList()) + point).sortedBy { it.date ?: "" })
+        }
+    }
+    return out.values.toList()
 }
 
 /** "2024-05-01T08:30:00" → "01/05/2024". */

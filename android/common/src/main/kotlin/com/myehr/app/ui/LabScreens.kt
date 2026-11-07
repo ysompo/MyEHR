@@ -162,7 +162,7 @@ fun LabSeriesScreen(series: LabSeries?, meds: List<com.myehr.app.ai.MedSummary> 
             SoftCard(Modifier.fillMaxWidth()) {
                 val pts = series.points.reversed()
                 pts.forEachIndexed { i, p ->
-                    CardRow(fmtDate(p.date), divider = i < pts.lastIndex, trailing = { ValueText(p.resultText ?: "", p.unit, p.status()) })
+                    CardRow(fmtDate(p.date), p.source?.let { "ממסמך: $it" }, divider = i < pts.lastIndex, trailing = { ValueText(p.resultText ?: "", p.unit, p.status()) })
                 }
             }
         }

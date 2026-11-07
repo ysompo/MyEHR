@@ -45,11 +45,16 @@ object DesktopSecrets : SecretStore {
     override fun setConsented(kind: String) = prefs.putBoolean("consent_$kind", true)
 }
 
-class DesktopPlatform(makeStore: () -> DesktopStore = { DesktopStore() }) : Platform {
+class DesktopPlatform(makeStore: () -> DesktopStore = { DesktopStore() }, makeVault: () -> com.myehr.app.data.FileVault = { DesktopVault() }) : Platform {
     override val deviceWord = "במחשב"
     val store by lazy(makeStore)
     override val repo by lazy { Repo(store) }
     override val secrets: SecretStore = DesktopSecrets
+    override val files by lazy(makeVault)
+
+    @Composable override fun rememberPicker(onPages: (List<com.myehr.app.data.Page>) -> Unit) = rememberDesktopPicker(onPages)
+
+    @Composable override fun PageView(page: com.myehr.app.data.Page, modifier: Modifier) = DesktopPageView(page, modifier)
     override fun logAi(person: String, question: String, sent: String, answer: String) = store.logAi(person, question, sent, answer)
 
     /** Opens Google Calendar in the browser with the appointment filled in; the user clicks Save. */

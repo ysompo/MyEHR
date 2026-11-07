@@ -41,6 +41,7 @@ class AndroidPlatform(private val context: Context) : Platform {
     private val store by lazy { Store.get(context) }
     override val repo by lazy { Repo(store) }
     override val secrets: SecretStore by lazy { Secrets(context) }
+    override val files by lazy { com.myehr.app.data.AndroidVault(context) }
     override fun logAi(person: String, question: String, sent: String, answer: String) = store.logAi(person, question, sent, answer)
 
     /** Opens the phone's calendar app (e.g. Google Calendar) with the appointment filled in; the user taps Save. */
@@ -76,6 +77,10 @@ class AndroidPlatform(private val context: Context) : Platform {
     }
 
     @Composable override fun UpdateSection() = com.myehr.app.update.UpdateSection()
+
+    @Composable override fun rememberPicker(onPages: (List<com.myehr.app.data.Page>) -> Unit) = rememberAndroidPicker(onPages)
+
+    @Composable override fun PageView(page: com.myehr.app.data.Page, modifier: androidx.compose.ui.Modifier) = AndroidPageView(page, modifier)
 
     companion object {
         @OptIn(ExperimentalTextApi::class)

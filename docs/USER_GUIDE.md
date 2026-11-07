@@ -55,6 +55,23 @@ Ask in Hebrew or English, for example "how did my cholesterol change since I sta
 - Tap **"מה נשלח ל-Claude?"** under an answer to see exactly what was sent.
 - Answers describe trends and timing. They are not medical advice.
 
+## 5a. Add a document from a private doctor or hospital
+1. **Documents** tab → **הוספת מסמך** (add document).
+2. Take a photo of each page (phone) or choose a PDF or picture file.
+3. Choose whose document it is, then **אישור ושליחה לקריאה** (OK and send for reading).
+   The whole document goes to Claude to be read, including any name or ID on it. Needs your API key.
+4. Tick what to add, then **שמירה** (save).
+
+What happens:
+- Lab values join the same graphs as Meuhedet's, marked with the document's source. If Meuhedet has the same test on the same day, Meuhedet's value is kept.
+- Medications appear under **ממסמכים שהעליתם** (from your documents) in the Medications tab.
+- Diagnoses and allergies appear on the Home screen.
+- The document itself is kept encrypted on the device. Open it from the Documents tab, or delete it there (this also removes what was added from it).
+
+## 5b. Diagnoses, allergies and notes
+On the Home screen, under **אבחנות, רגישויות והערות**: tap **+ הוספה** to add one, or tap an item to edit or delete it.
+The question tab can use them (it asks first). Your notes are treated as your own words, not as medical records.
+
 ## 6. Settings
 - **Text size:** normal, large, extra large.
 - **Colors:** Pine, Ocean, Olive or High contrast. Light/dark follows your device.

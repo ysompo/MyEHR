@@ -18,6 +18,8 @@ data class MedSummary(
     val purchases: Int,
     val active: Boolean,
     val permanent: Boolean,
+    /** null = Meuhedet; otherwise the uploaded document's source. Never sent to Claude (may name a provider). */
+    val source: String? = null,
 )
 
 /** What the tools can read for ONE person. Implemented over Repo on the phone, faked in tests. */
@@ -25,6 +27,8 @@ interface AiData {
     fun series(): List<LabSeries>
     fun medications(): List<MedSummary>
     fun age(): Int?
+    /** Diagnoses, allergies and the user's own notes. */
+    fun conditions(): List<com.myehr.app.data.Condition> = emptyList()
 }
 
 /** Kinds of data, used for the first-time "what will be sent" consent. */
@@ -33,6 +37,7 @@ enum class DataKind(val label: String) {
     LAB_VALUES("ערכי בדיקות ותאריכים"),
     MEDICATIONS("שמות תרופות ותאריכי רכישה"),
     AGE("גיל"),
+    CONDITIONS("אבחנות, רגישויות והערות שהוספתם"),
 }
 
 /** Result of running a tool: the JSON sent to Claude, plus a human summary for the preview/log. */
@@ -60,7 +65,12 @@ class AiTools(private val data: AiData) {
         ),
         ToolSpec(
             "list_medications",
-            "List this person's medications: name, first purchase date (use this as the start date), last purchase date, number of purchases, whether currently active, whether marked permanent.",
+            "List this person's medications: name, first purchase date (use this as the start date), last purchase date, number of purchases, whether currently active, whether marked permanent, and source (Meuhedet or an uploaded document, where first_purchase is the document's start date).",
+            emptyMap(), emptyList(),
+        ),
+        ToolSpec(
+            "list_conditions",
+            "List this person's diagnoses, allergies/sensitivities and their own notes, with dates. Notes are the person's own words, not medical records.",
             emptyMap(), emptyList(),
         ),
         ToolSpec(
@@ -75,6 +85,7 @@ class AiTools(private val data: AiData) {
         "get_lab_history" -> DataKind.LAB_VALUES
         "list_medications" -> DataKind.MEDICATIONS
         "get_age" -> DataKind.AGE
+        "list_conditions" -> DataKind.CONDITIONS
         else -> DataKind.TEST_NAMES
     }
 
@@ -83,6 +94,7 @@ class AiTools(private val data: AiData) {
         "get_lab_history" -> history((input["code"] as? JsonPrimitive)?.content.orEmpty())
         "list_medications" -> meds()
         "get_age" -> age()
+        "list_conditions" -> conditions()
         else -> ToolOutput(DataKind.TEST_NAMES, """{"error":"unknown tool"}""", "כלי לא מוכר", isError = true)
     }
 
@@ -118,6 +130,7 @@ class AiTools(private val data: AiData) {
                         put("norm_low", p.normLow)
                         put("norm_high", p.normHigh)
                         put("out_of_range", p.outOfRange)
+                        put("source", if (p.source == null) "Meuhedet" else "uploaded document")
                     })
                 }
             })
@@ -137,10 +150,26 @@ class AiTools(private val data: AiData) {
                     put("purchases", x.purchases)
                     put("active", x.active)
                     put("permanent", x.permanent)
+                    put("source", if (x.source == null) "Meuhedet" else "uploaded document")
                 })
             }
         }
         return ToolOutput(DataKind.MEDICATIONS, json.toString(), "${m.size} תרופות")
+    }
+
+    private fun conditions(): ToolOutput {
+        val c = data.conditions()
+        val json = buildJsonArray {
+            c.forEach { x ->
+                add(buildJsonObject {
+                    put("type", x.type)
+                    put("text", x.text)
+                    put("date", x.date?.take(10))
+                    put("source", when { x.type == com.myehr.app.data.Condition.NOTE -> "the person's own note"; x.source == null -> "added by the person"; else -> "uploaded document" })
+                })
+            }
+        }
+        return ToolOutput(DataKind.CONDITIONS, json.toString(), "${c.size} אבחנות, רגישויות והערות")
     }
 
     private fun age(): ToolOutput {

@@ -56,6 +56,12 @@ Endpoints and fields: [SITE_MAP.md](SITE_MAP.md). If the site changes, re-record
 - Consent is asked the first time each `DataKind` is needed. Every exchange (question, what was sent, answer) is logged locally.
 - The user's API key is stored encrypted (Keystore / OS keychain).
 
+### Uploaded documents
+- `ui/UploadScreens.kt`: pick pages (camera / file) → user OKs sending → `ai/DocReader` sends the pages (image or PDF blocks) with a forced `save_findings` tool → the user ticks what to keep.
+- Stored as `Upload` (kind `upload`) and `Condition` (kind `condition`, also used for hand-added diagnoses, allergies and notes). Pages go to the encrypted `FileVault` (`AndroidVault` / `DesktopVault`) as `<id>_<n>`.
+- `Repo.mergeUploads` adds uploaded lab values to the Meuhedet series with the same code or name; a value on a day Meuhedet already has is dropped. `LabPoint.source` / `MedSummary.source` mark where a value came from; the AI sees only "Meuhedet" or "uploaded document".
+- Pages are viewed in-app: `PdfRenderer` on Android, PDFBox on desktop.
+
 ### App lock
 - Android: `BiometricPrompt` (biometric or device credential) on every start; `FLAG_SECURE` blocks screenshots.
 - Desktop: app password, stored as a salted PBKDF2 hash (210k iterations) in the keychain.

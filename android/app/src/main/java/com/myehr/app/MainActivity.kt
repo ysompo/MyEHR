@@ -55,13 +55,17 @@ class MainActivity : FragmentActivity() {
 
     override fun onStart() {
         super.onStart()
+        // Back from the camera or file picker much later: lock after all.
+        if (ExternalPick.since != 0L && System.currentTimeMillis() - ExternalPick.since > ExternalPick.GRACE_MS) {
+            ExternalPick.since = 0L; unlocked.value = false
+        }
         if (!unlocked.value) authenticate()
     }
 
     override fun onStop() {
         super.onStop()
-        // Lock every time the app leaves the screen, unless it's just rotating.
-        if (!isChangingConfigurations) unlocked.value = false
+        // Lock every time the app leaves the screen, unless it's just rotating or the user is taking a photo / picking a file.
+        if (!isChangingConfigurations && ExternalPick.since == 0L) unlocked.value = false
     }
 
     private fun authenticate() {
@@ -83,4 +87,10 @@ class MainActivity : FragmentActivity() {
                 .build()
         )
     }
+}
+
+/** Set while the camera or file picker (another app) is open for the user, so returning doesn't ask to unlock again. */
+object ExternalPick {
+    const val GRACE_MS = 5 * 60_000L
+    @Volatile var since = 0L
 }

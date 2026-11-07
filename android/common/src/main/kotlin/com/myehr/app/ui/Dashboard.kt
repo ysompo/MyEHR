@@ -33,6 +33,7 @@ data class DashboardData(
     val flagged: List<LabSeries>,
     val latest: List<LabSeries>,
     val meds: List<MedSummary>,
+    val conditions: List<com.myehr.app.data.Condition> = emptyList(),
 )
 
 val AskSuggestions = listOf("מה ההמוגלובין האחרון שלי?", "איך השתנה הכולסטרול לאורך השנים?", "מה השתנה מאז שהתחלתי תרופה?")
@@ -47,6 +48,7 @@ fun Dashboard(
     onSeries: (String) -> Unit,
     onSync: () -> Unit,
     onSettings: () -> Unit,
+    onConditionsChanged: () -> Unit = {},
 ) {
     val bigText = androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.25f
     LazyColumn(contentPadding = PaddingValues(bottom = Space.xl)) {
@@ -140,6 +142,7 @@ fun Dashboard(
                 }
             }
         }
+        item { ConditionsCard(d.selected.id, d.conditions, onConditionsChanged) }
         // Latest results
         item { SectionTitle("תוצאות אחרונות") }
         item {

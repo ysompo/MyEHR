@@ -48,6 +48,8 @@ data class LabPoint(
     val normLow: Double?,
     val normHigh: Double?,
     val stickerId: String?,
+    /** null = from Meuhedet; otherwise where an uploaded document came from (e.g. "Hospital X"). */
+    val source: String? = null,
 ) {
     val outOfRange: Boolean
         get() = value != null && ((normLow != null && value < normLow) || (normHigh != null && value > normHigh))

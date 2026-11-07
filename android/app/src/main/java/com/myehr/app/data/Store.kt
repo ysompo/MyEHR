@@ -114,6 +114,10 @@ class Store private constructor(context: Context) : com.myehr.app.data.RecordSto
             buildMap { while (c.moveToNext()) put(c.getString(0), c.getString(1)) }
         }
 
+    override fun delete(person: String, kind: String, key: String) {
+        db.delete("raw", "person=? AND kind=? AND k=?", arrayOf(person, kind, key))
+    }
+
     fun logAi(person: String, question: String, sent: String, answer: String) {
         db.insert("ai_log", null, ContentValues().apply {
             put("at", System.currentTimeMillis()); put("person", person); put("question", question); put("sent", sent); put("answer", answer)
@@ -136,4 +140,39 @@ class Store private constructor(context: Context) : com.myehr.app.data.RecordSto
             instance ?: Store(context.applicationContext).also { instance = it }
         }
     }
+}
+
+/** Uploaded documents and saved PDFs: one AES-GCM file each, key in the Android Keystore. */
+class AndroidVault(context: Context) : com.myehr.app.data.FileVault {
+    private val dir = java.io.File(context.filesDir, "vault").apply { mkdirs() }
+    private fun f(id: String) = java.io.File(dir, id.filter { it.isLetterOrDigit() || it == '_' || it == '-' })
+
+    private fun key(): SecretKey {
+        val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        (ks.getKey(ALIAS, null) as? SecretKey)?.let { return it }
+        val gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+        gen.init(
+            KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(256)
+                .build()
+        )
+        return gen.generateKey()
+    }
+
+    override fun put(id: String, bytes: ByteArray) {
+        val c = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
+        f(id).writeBytes(c.iv + c.doFinal(bytes))
+    }
+
+    override fun get(id: String): ByteArray? {
+        val raw = f(id).takeIf { it.exists() }?.readBytes() ?: return null
+        val c = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, raw, 0, 12)) }
+        return c.doFinal(raw, 12, raw.size - 12)
+    }
+
+    override fun delete(id: String) { f(id).delete() }
+
+    private companion object { const val ALIAS = "myehr_file_key" }
 }

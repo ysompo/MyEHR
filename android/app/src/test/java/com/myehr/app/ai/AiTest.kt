@@ -66,4 +66,27 @@ class AiTest {
             bodies.forEach { b -> listOf("Person", "000000001", "Alpha", "Beta").forEach { assertFalse("leaked $it", b.contains(it)) } }
         } finally { server.shutdown() }
     }
+
+    /** A document goes out as a PDF block with a forced save_findings call; the findings come back typed. */
+    @Test fun docReaderAgainstFakeApi() = runBlocking {
+        val server = MockWebServer()
+        val r = """{"id":"m1","type":"message","role":"assistant","model":"$MODEL","stop_reason":"tool_use","stop_sequence":null,
+            "content":[{"type":"tool_use","id":"tu1","name":"save_findings","input":{"date":"2024-03-05","source":"Lab Gamma","type":"lab",
+            "labs":[{"name":"Hemoglobin","code":"100","value":"12.9","unit":"g/dL","low":12,"high":16}],
+            "meds":[{"name":"MED B"}],"diagnoses":["Anemia"],"allergies":[]}}],"usage":{"input_tokens":10,"output_tokens":5}}"""
+        server.enqueue(MockResponse().setHeader("content-type", "application/json").setBody(r))
+        server.start()
+        try {
+            val f = DocReader("sk-test", server.url("/").toString().trimEnd('/'))
+                .read(listOf(com.myehr.app.data.Page("%PDF-1.4 fake".toByteArray(), "application/pdf")), listOf("100" to "HEMOGLOBIN"))
+            assertEquals("2024-03-05", f.date)
+            assertEquals("100", f.labs.single().code)
+            assertEquals(12.0, f.labs.single().low!!, 0.0)
+            assertEquals(1, f.conditions("u1").size)
+            val body = server.takeRequest().body.readUtf8()
+            assertTrue(body.contains("\"type\":\"document\"") && body.contains("application/pdf"))
+            assertTrue(body.contains("\"tool_choice\"") && body.contains("save_findings"))
+            assertTrue(body.contains("100: HEMOGLOBIN"))
+        } finally { server.shutdown() }
+    }
 }

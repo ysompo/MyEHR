@@ -27,6 +27,8 @@ interface Platform {
     val deviceWord: String
     val repo: Repo
     val secrets: SecretStore
+    /** Encrypted storage for uploaded documents and saved PDFs. */
+    val files: com.myehr.app.data.FileVault
     fun logAi(person: String, question: String, sent: String, answer: String)
     fun addToCalendar(v: Visit)
 
@@ -38,6 +40,10 @@ interface Platform {
     @Composable fun UpdateBanner()
     /** Settings section: version + check for updates. */
     @Composable fun UpdateSection()
+    /** Camera (phone) and file picker; pages arrive already shrunk for sending. */
+    @Composable fun rememberPicker(onPages: (List<com.myehr.app.data.Page>) -> Unit): DocPicker
+    /** Shows one image, or every page of a PDF, inside the app. */
+    @Composable fun PageView(page: com.myehr.app.data.Page, modifier: androidx.compose.ui.Modifier)
 }
 
 val LocalPlatform = staticCompositionLocalOf<Platform> { error("No Platform provided") }
