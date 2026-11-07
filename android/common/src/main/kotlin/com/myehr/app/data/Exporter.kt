@@ -137,13 +137,13 @@ object Exporter {
             val docs = buildJsonArray {
                 repo.labVisits(p).forEach { v ->
                     val bytes = files.get(meuhedetFileId(p, "lab", v.stickerId)) ?: return@forEach
-                    val name = unique("files/${v.date?.take(10) ?: "undated"}_lab-result_${safe(v.institute ?: v.stickerId)}.pdf")
+                    val name = unique("files/${safe(v.date?.take(10) ?: "undated")}_lab-result_${safe(v.institute ?: v.stickerId)}.pdf")
                     add(name, bytes)
                     add(buildJsonObject { put("type", "lab result"); put("date", v.date?.take(10)); put("lab", v.institute); put("file", name) })
                 }
                 repo.documents(p).forEach { d ->
                     val bytes = d.guid?.let { files.get(meuhedetFileId(p, "doc", it + d.documentKey)) }
-                    val name = bytes?.let { unique("files/${d.date?.take(10) ?: "undated"}_${safe(d.title)}.pdf") }
+                    val name = bytes?.let { unique("files/${safe(d.date?.take(10) ?: "undated")}_${safe(d.title)}.pdf") }
                     if (bytes != null) add(name!!, bytes)
                     add(buildJsonObject {
                         put("type", d.type ?: "document"); put("title", d.title); put("date", d.date?.take(10)); put("doctor", d.doctor)
@@ -154,7 +154,7 @@ object Exporter {
                     val names = u.mimes.indices.mapNotNull { i ->
                         val bytes = files.get(u.pageId(i)) ?: return@mapNotNull null
                         val ext = if (u.mimes[i] == "application/pdf") "pdf" else "jpg"
-                        unique("files/${u.date ?: "undated"}_${safe(u.title ?: u.source ?: "uploaded")}_${i + 1}.$ext").also { add(it, bytes) }
+                        unique("files/${safe(u.date ?: "undated")}_${safe(u.title ?: u.source ?: "uploaded")}_${i + 1}.$ext").also { add(it, bytes) }
                     }
                     add(buildJsonObject {
                         put("type", u.type ?: "uploaded document"); put("title", u.title); put("date", u.date); put("source", u.source)
@@ -198,6 +198,7 @@ object Exporter {
         }
     }
 
-    private fun safe(s: String) = s.replace(Regex("[\\\\/:*?\"<>|\\s]+"), "_").take(60)
+    /** Safe inside a ZIP path: no folders, no "..", no control characters (titles and dates can come from documents). */
+    private fun safe(s: String) = s.replace(Regex("[\\\\/:*?\"<>|\\s\\p{Cntrl}]+"), "_").replace("..", "_").take(60)
     private val prettyJson = kotlinx.serialization.json.Json { prettyPrint = true }
 }

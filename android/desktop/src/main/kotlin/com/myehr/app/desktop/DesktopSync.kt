@@ -111,6 +111,11 @@ object DesktopSync {
             val st = Stage().apply { title = "התחברות למאוחדת"; scene = Scene(web, 900.0, 760.0) }
             stage = st
             var handedOff = false
+            // Stay on Meuhedet: any other site (a link, an ad) is sent back to the personal area.
+            web.engine.locationProperty().addListener { _, _, loc ->
+                val h = runCatching { URI(loc).host }.getOrNull() ?: return@addListener
+                if (h != "meuhedet.co.il" && !h.endsWith(".meuhedet.co.il")) Fx.runLater { web.engine.load("$ORIGIN/") }
+            }
             web.engine.loadWorker.stateProperty().addListener { _, _, state ->
                 if (state != Worker.State.SUCCEEDED || handedOff) return@addListener
                 val host = runCatching { URI(web.engine.location).host }.getOrNull()

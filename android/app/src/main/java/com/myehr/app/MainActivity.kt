@@ -91,7 +91,7 @@ class MainActivity : FragmentActivity() {
 
 /** Set while the camera or file picker (another app) is open for the user, so returning doesn't ask to unlock again. */
 object ExternalPick {
-    const val GRACE_MS = 5 * 60_000L
+    const val GRACE_MS = 2 * 60_000L
     @Volatile var since = 0L
 }
 
