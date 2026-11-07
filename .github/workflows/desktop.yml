@@ -19,7 +19,7 @@ jobs:
             task: packageMsi
             ext: msi
             name: MyEHR-Windows.msi
-          - os: macos-14        # Apple Silicon (M1 and newer)
+          - os: macos-15        # Apple Silicon (M1 and newer)
             task: packageDmg
             ext: dmg
             name: MyEHR-Mac-AppleSilicon.dmg
