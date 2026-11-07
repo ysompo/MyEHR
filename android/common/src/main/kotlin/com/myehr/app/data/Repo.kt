@@ -21,8 +21,19 @@ class Repo(private val store: RecordStore) {
     fun labDetail(p: String, stickerId: String) = Parsers.labDetail(store.get(p, Kind.LAB_DETAIL, stickerId))
     /** Meuhedet's lab series with values from uploaded documents merged in (Meuhedet wins on the same day). */
     fun labSeries(p: String): List<LabSeries> =
-        mergeUploads(store.all(p, Kind.LAB_HISTORY).mapNotNull { (code, json) -> Parsers.labSeries(code, json) }, uploads(p))
+        mergeUploads(store.all(p, Kind.LAB_HISTORY).mapNotNull { (code, json) -> Parsers.labSeries(code, json)?.let { fillRanges(p, it) } }, uploads(p))
             .sortedBy { it.name }
+
+    /** History answers sometimes lack the normal range; the result's own page usually has it. */
+    private fun fillRanges(p: String, s: LabSeries): LabSeries {
+        if (s.points.all { it.normLow != null || it.normHigh != null }) return s
+        return s.copy(points = s.points.map { pt ->
+            if (pt.normLow != null || pt.normHigh != null || pt.stickerId == null || pt.value == null) return@map pt
+            val recs = labDetail(p, pt.stickerId)?.records.orEmpty().filter { it.numeric == pt.value && (it.min != null || it.max != null) }
+            val r = recs.firstOrNull { sameTestName(it.title, s.name) } ?: recs.singleOrNull() ?: return@map pt
+            pt.copy(normLow = r.min, normHigh = r.max)
+        })
+    }
     fun series(p: String, code: String) = labSeries(p).firstOrNull { it.code == code }
 
     // ---- Uploaded documents, diagnoses, allergies and notes ----
@@ -142,6 +153,10 @@ fun valueUnit(value: String?, unit: String?): String =
     listOfNotNull(value, unit).joinToString(" ").let { if (it.isEmpty()) it else ltr(it) }
 
 /** "12–16" (either end may be missing). */
-fun range(low: Double?, high: Double?): String = ltr("${low?.let(::num) ?: ""}–${high?.let(::num) ?: ""}")
+fun range(low: Double?, high: Double?): String = when {
+    low != null && high == null -> ltr("≥ ${num(low)}")
+    low == null && high != null -> ltr("≤ ${num(high)}")
+    else -> ltr("${low?.let(::num) ?: ""}–${high?.let(::num) ?: ""}")
+}
 
 private fun num(d: Double): String = if (d % 1.0 == 0.0) d.toLong().toString() else d.toString()

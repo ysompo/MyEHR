@@ -132,7 +132,7 @@ fun Dashboard(
                             }
                             Gap(Space.s)
                             ValueText(last?.resultText ?: "", s.unit, last?.status() ?: Status.NONE, big = true)
-                            Text("טווח תקין ${com.myehr.app.data.range(last?.normLow, last?.normHigh)}",
+                            if (last?.normLow != null || last?.normHigh != null) Text("טווח תקין ${com.myehr.app.data.range(last.normLow, last.normHigh)}",
                                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(fmtDate(last?.date), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Gap(Space.m)

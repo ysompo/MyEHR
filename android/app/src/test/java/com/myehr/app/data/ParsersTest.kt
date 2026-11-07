@@ -35,6 +35,16 @@ class ParsersTest {
         assertFalse(d.records[1].outOfRange)
     }
 
+    @Test fun zeroRangeMeansNone() {
+        val s = Parsers.labSeries("8", """{"TestDesc":"HDL","Items":[
+            {"TestDate":"2026-01-01T00:00:00","Result":"44","TestValue":44,"NormFrom":"0","NormTo":"0"},
+            {"TestDate":"2026-02-01T00:00:00","Result":"45","TestValue":45,"NormFrom":"0","NormTo":"0","TestNormLow":"40","TestNormHigh":"0"}]}""")!!
+        assertNull(s.points[0].normLow); assertNull(s.points[0].normHigh)
+        assertFalse(s.points[0].outOfRange)
+        assertEquals(40.0, s.points[1].normLow!!, 0.0); assertNull(s.points[1].normHigh)
+        assertEquals("\u2066≥ 40\u2069", range(40.0, null))
+    }
+
     @Test fun labSeriesCautions() {
         val s = Parsers.labSeries("7", """{"TestDesc":"TEST B","Items":[
             {"TestDate":"2020-01-01T00:00:00","Result":"NEGATIVE","TestValue":0,"MeasureUnit":"mg/dL","NormFrom":"1","NormTo":"5"},

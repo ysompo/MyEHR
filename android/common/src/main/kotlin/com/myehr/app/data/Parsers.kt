@@ -89,8 +89,8 @@ object Parsers {
             title = title,
             value = listOfNotNull(sign, value).joinToString("").ifEmpty { null },
             unit = single.str("measurementUnit") ?: scale.str("measurementUnit"),
-            min = scale.num("minRange"),
-            max = scale.num("maxRange"),
+            min = normRange(scale.num("minRange"), scale.num("maxRange"))?.first,
+            max = normRange(scale.num("minRange"), scale.num("maxRange"))?.second,
             panic = r.num("panicLevel")?.toInt(),
             note = r.el("note").obj().str("text") ?: single.str("remark"),
         )
@@ -104,20 +104,31 @@ object Parsers {
             k to (o.str("Value") ?: k)
         }
 
+    /**
+     * A usable normal range, or null. The site sends 0 for an end it doesn't have ("0–0" = no range,
+     * "40–0" = at least 40).
+     */
+    fun normRange(low: Double?, high: Double?): Pair<Double?, Double?>? {
+        val l = low?.takeIf { it != 0.0 || (high != null && high > 0.0) }
+        val h = high?.takeIf { it != 0.0 }?.takeIf { l == null || it >= l }
+        return if (l == null && h == null) null else l to h
+    }
+
     fun labSeries(code: String, text: String?): LabSeries? {
         val o = parse(text).obj() ?: return null
         val points = o.list("Items").map { e ->
             val i = e.obj()
             val text = i.str("Result")
             // A text answer ("negative", "see note") may come with TestValue 0: that 0 is not a measurement.
+            val norm = normRange(i.num("NormFrom"), i.num("NormTo")) ?: normRange(i.num("TestNormLow"), i.num("TestNormHigh")) ?: (null to null)
             val textOnly = text != null && text.replace(",", ".").trim().toDoubleOrNull() == null && (i.num("TestValue") ?: 0.0) == 0.0
             LabPoint(
                 date = i.str("TestDate"),
                 value = if (textOnly) null else i.num("TestValue") ?: i.num("Result"),
                 resultText = i.str("Result"),
                 unit = i.str("MeasureUnit"),
-                normLow = i.num("NormFrom"),
-                normHigh = i.num("NormTo"),
+                normLow = norm.first,
+                normHigh = norm.second,
                 stickerId = i.str("StickerId"),
             )
         }.sortedBy { it.date ?: "" }
