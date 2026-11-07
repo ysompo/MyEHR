@@ -118,6 +118,9 @@ class SyncEngine(
 
     /** What could not be fetched in this run ("בדיקות מעבדה (אבא)"), shown to the user at the end. */
     val failures = linkedSetOf<String>()
+
+    /** New lab results per person in this run: first name → (results, out of range). First sync of a person not counted. */
+    val newResults = linkedMapOf<String, Pair<Int, Int>>()
     private var who = ""
 
     private fun label(path: String) = when {
@@ -201,6 +204,8 @@ class SyncEngine(
         val labList = json("POST", Api.LAB_LIST, range)
             ?: json("POST", Api.LAB_LIST, """{"FromDate":"${isoDay(today.minusYears(3))}","ToDate":"${isoDay(today.plusDays(1))}"}""")
         var newVisits = 0
+        val firstTime = sink.fetchedAt(id, Kind.LAB_LIST, "") == null
+        var newRecords = 0; var newFlagged = 0
         if (labList != null) {
             sink.put(id, Kind.LAB_LIST, "", labList)
             // Only results not stored yet (lab results don't change once issued).
@@ -210,8 +215,12 @@ class SyncEngine(
             visits.forEachIndexed { i, v ->
                 onProgress("תוצאות חדשות ${i + 1}/${visits.size}")
                 val day = v.date?.take(10)?.replace("-", "") ?: return@forEachIndexed
-                json("GET", Api.labDetail(v.labCode, v.stickerId, day))?.let { sink.put(id, Kind.LAB_DETAIL, v.stickerId, it) }
+                json("GET", Api.labDetail(v.labCode, v.stickerId, day))?.let {
+                    sink.put(id, Kind.LAB_DETAIL, v.stickerId, it)
+                    Parsers.labDetail(it)?.records?.let { r -> newRecords += r.size; newFlagged += r.count { x -> x.outOfRange } }
+                }
             }
+            if (!firstTime && newRecords > 0) newResults[who] = newRecords to newFlagged
         }
 
         // History (graphs) only when there are new results, or never fetched. Resumable:

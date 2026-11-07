@@ -133,7 +133,8 @@ object DesktopSync {
         try {
             val engine = SyncEngine(DesktopCaller(), store, onProgress = { SyncState.set(SyncState.Status(running = true, text = it)) }, files = DesktopVault())
             val people = engine.syncFamily(MemberSwitcher { Session.selectMember(it) })
-            SyncState.set(SyncState.Status(text = "הסנכרון הסתיים: ${people.joinToString(", ") { it.name }}" + SyncState.missing(engine.failures), finishedAt = System.currentTimeMillis()))
+            val news = SyncState.newResultsText(engine.newResults)
+            SyncState.set(SyncState.Status(text = "הסנכרון הסתיים: ${people.joinToString(", ") { it.name }}" + (if (news.isNotEmpty()) "\n$news" else "") + SyncState.missing(engine.failures), finishedAt = System.currentTimeMillis()))
         } catch (e: SessionExpired) {
             SyncState.set(SyncState.Status(text = "החיבור למאוחדת נותק. התחברו שוב.", needsLogin = true))
         } catch (e: Exception) {

@@ -30,7 +30,7 @@ fun epochMs(s: String?): Long? = s?.let {
 /** "09:30", or "" for date-only values. */
 private fun hhmm(s: String?): String = s?.takeIf { it.length >= 16 && it[10] == 'T' }?.substring(11, 16)?.takeIf { it != "00:00" } ?: ""
 
-private fun LazyListScope.visits(title: String, list: List<Visit>, empty: String, withCalendar: Boolean, platform: Platform) {
+private fun LazyListScope.visits(title: String, list: List<Visit>, empty: String, withCalendar: Boolean, platform: Platform, onPrep: (Visit) -> Unit = {}) {
     item { SectionTitle(title) }
     if (list.isEmpty()) item {
         Text(empty, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -48,6 +48,8 @@ private fun LazyListScope.visits(title: String, list: List<Visit>, empty: String
                     if (withCalendar) {
                         Row(Modifier.fillMaxWidth().padding(start = Space.l, end = Space.l, bottom = Space.m), verticalAlignment = Alignment.CenterVertically) {
                             OutlinedButton(onClick = { platform.addToCalendar(v) }) { Text("הוספה ליומן") }
+                            androidx.compose.foundation.layout.Spacer(Modifier.padding(start = Space.s))
+                            androidx.compose.material3.TextButton(onClick = { onPrep(v) }) { Text("הכנה לביקור") }
                         }
                         if (i < list.lastIndex) androidx.compose.material3.HorizontalDivider(Modifier.padding(horizontal = Space.l), color = MaterialTheme.colorScheme.outline)
                     }
@@ -58,10 +60,10 @@ private fun LazyListScope.visits(title: String, list: List<Visit>, empty: String
 }
 
 @Composable
-fun VisitsScreen(upcoming: List<Visit>, past: List<Visit>) {
+fun VisitsScreen(upcoming: List<Visit>, past: List<Visit>, onPrep: (Visit) -> Unit = {}) {
     val platform = LocalPlatform.current
     LazyColumn(contentPadding = PaddingValues(bottom = Space.xl)) {
-        visits("תורים קרובים", upcoming, "אין תורים קרובים.", withCalendar = true, platform = platform)
+        visits("תורים קרובים", upcoming, "אין תורים קרובים.", withCalendar = true, platform = platform, onPrep = onPrep)
         visits("ביקורים קודמים", past, "אין ביקורים קודמים.", withCalendar = false, platform = platform)
         item {
             Text("״הוספה ליומן״ פותחת את אפליקציית היומן עם פרטי התור. האירוע נשמר רק אחרי שתלחצו שמירה.",

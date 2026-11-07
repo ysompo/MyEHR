@@ -57,6 +57,30 @@ class Repo(private val store: RecordStore) {
     fun deleteCondition(p: String, id: String) = store.delete(p, UpKind.CONDITION, id)
     fun uploadedMeds(p: String): List<Pair<UpMed, Upload>> = uploads(p).flatMap { u -> u.meds.map { it to u } }
 
+    /**
+     * What changed since the last visit, for an upcoming one: since the last past visit in the same specialty
+     * (else the last visit of any kind, else one year back).
+     */
+    fun visitPrep(p: String, v: Visit): VisitPrep {
+        val past = pastVisits(p).filter { (it.start ?: "") < (v.start ?: "9999") }.sortedByDescending { it.start ?: "" }
+        val same = past.firstOrNull { v.specialty != null && it.specialty == v.specialty }
+        val sinceVisit = same ?: past.firstOrNull()
+        val since = sinceVisit?.start?.take(10) ?: java.time.LocalDate.now().minusYears(1).toString()
+        val series = labSeries(p)
+        val newResults = series.flatMap { s -> s.points.filter { (it.date?.take(10) ?: "") > since }.map { s to it } }
+            .sortedByDescending { it.second.date ?: "" }
+        val meds = aiData(p).medications()
+        return VisitPrep(
+            visit = v, since = since, sinceVisit = sinceVisit, sameSpecialty = same != null,
+            newResults = newResults,
+            stillOut = series.filter { s -> s.latest?.outOfRange == true && (s.latest?.date?.take(10) ?: "") <= since },
+            medsStarted = meds.filter { (it.firstPurchase?.take(10) ?: "") > since },
+            activeMeds = meds.filter { it.active },
+            conditions = conditions(p),
+            newUploads = uploads(p).filter { (it.date ?: "") > since },
+        )
+    }
+
     /** Test codes and names this person already has, so a document's tests can be linked to them. */
     fun knownTests(p: String): List<Pair<String, String>> =
         store.all(p, Kind.LAB_HISTORY).mapNotNull { (code, json) -> Parsers.labSeries(code, json)?.let { code to it.name } }
@@ -141,6 +165,20 @@ fun mergeUploads(series: List<LabSeries>, uploads: List<Upload>): List<LabSeries
     }
     return out.values.toList()
 }
+
+data class VisitPrep(
+    val visit: Visit,
+    val since: String,
+    val sinceVisit: Visit?,
+    val sameSpecialty: Boolean,
+    val newResults: List<Pair<LabSeries, LabPoint>>,
+    /** Out of range at their last result, from before [since]: still worth mentioning. */
+    val stillOut: List<LabSeries>,
+    val medsStarted: List<com.myehr.app.ai.MedSummary>,
+    val activeMeds: List<com.myehr.app.ai.MedSummary>,
+    val conditions: List<Condition>,
+    val newUploads: List<Upload>,
+)
 
 /** "2024-05-01T08:30:00" → "01/05/2024". */
 fun fmtDate(s: String?): String {

@@ -40,6 +40,7 @@ private sealed interface Sub {
     data class LabVisitDetail(val stickerId: String) : Sub
     data class LabHistory(val code: String) : Sub
     data object AddDoc : Sub
+    data class Prep(val visit: com.myehr.app.data.Visit) : Sub
     data object Export : Sub
     data class ViewFile(val fileId: String, val title: String) : Sub
     data class ViewUpload(val id: String) : Sub
@@ -105,6 +106,8 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
                     val bytes = load<ByteArray?>(null, s) { platform.files.get(s.fileId) }
                     if (bytes != null) androidx.compose.foundation.lazy.LazyColumn { item { platform.PageView(com.myehr.app.data.Page(bytes, "application/pdf"), Modifier.padding(Space.s)) } } }
                 Sub.Export -> { SubHeader("ייצוא התיק") { sub = Sub.Settings }; if (person != null) ExportScreen(people, person) }
+                is Sub.Prep -> { SubHeader("הכנה לביקור") { sub = null }
+                    if (person != null) VisitPrepScreen(load(null, s, person.id, refresh) { repo.visitPrep(person.id, s.visit) }) }
                 Sub.AddDoc -> { SubHeader("הוספת מסמך") { sub = null }; if (person != null) AddDocScreen(people, person) { refresh++; sub = null } }
                 is Sub.ViewUpload -> { SubHeader("מסמך שהעליתם") { sub = null }
                     if (person != null) UploadView(person.id, load(null, s, person.id) { repo.upload(person.id, s.id) }) { refresh++; sub = null } }
@@ -126,7 +129,7 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
                             byTest, { byTest = it }, { sub = Sub.LabHistory(it.code) }, { sub = Sub.LabVisitDetail(it.stickerId) })
                         Tab.ASK -> AskScreen(person, askPrefill)
                         Tab.MEDS -> MedsScreen(load(emptyList(), id) { repo.activeMeds(id) }, load(emptyList(), id) { repo.prescriptions(id) }, load(emptyList(), id) { repo.purchases(id) }, load(emptyList(), id, refresh) { repo.uploadedMeds(id) })
-                        Tab.VISITS -> VisitsScreen(load(emptyList(), id, refresh) { repo.upcomingVisits(id) }, load(emptyList(), id, refresh) { repo.pastVisits(id) })
+                        Tab.VISITS -> VisitsScreen(load(emptyList(), id, refresh) { repo.upcomingVisits(id) }, load(emptyList(), id, refresh) { repo.pastVisits(id) }) { sub = Sub.Prep(it) }
                         Tab.DOCS -> DocsScreen(load(emptyList(), id) { repo.documents(id) }, load(emptyList(), id) { repo.vaccines(id) }, load(emptyList(), id) { repo.examinations(id) },
                             load(emptyList(), id, refresh) { repo.uploads(id) }, onAdd = { sub = Sub.AddDoc }, onOpen = { sub = Sub.ViewUpload(it.id) },
                             fileOf = { d -> d.guid?.let { com.myehr.app.sync.meuhedetFileId(id, "doc", it + d.documentKey) }?.takeIf { platform.files.has(it) } },

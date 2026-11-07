@@ -85,6 +85,8 @@ class DesktopTest {
         PlatformFonts.family = DesktopPlatform.rubik
         val platform = DesktopPlatform(makeStore = { s }, makeVault = { DesktopVault(File(f.parentFile, "vault-test")) { ByteArray(32) } })
         renderTo("desktop_adddoc.png", platform) { com.myehr.app.ui.AddDocScreen(s.people(), s.people().first { it.id == id }) {} }
+        renderTo("desktop_prep.png", platform) { com.myehr.app.ui.VisitPrepScreen(repo.visitPrep(id, com.myehr.app.data.Visit("2026-12-01T09:00:00", null, "קרדיולוגיה", "ד\"ר לדוגמה", null, true)).copy(since = "2024-01-01")
+            .let { p -> p.copy(newResults = repo.labSeries(id).flatMap { s0 -> s0.points.filter { (it.date ?: "") > "2024-01-01" }.map { s0 to it } }) }) }
         renderTo("desktop_docs.png", platform) { com.myehr.app.ui.DocsScreen(emptyList(), emptyList(), emptyList(), repo.uploads(id)) }
         ImageComposeScene(width = 640, height = 1100, density = Density(1f)) {
             CompositionLocalProvider(LocalPlatform provides platform) {

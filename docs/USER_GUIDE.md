@@ -85,6 +85,16 @@ Not covered: ferritin and platelets (no general published range found on PubMed 
 
 If sex or age is unknown, or the unit differs, no general range is shown.
 
+## 4b. New-result alert
+After a sync (not the first one), the phone shows "תוצאות חדשות" with how many new results came in, how many are out of range,
+and for whom. Test names and values are not shown; on the lock screen it only says there are new results.
+On the computer, the same line appears in the sync message.
+
+## 4c. Visit prep
+**Visits** tab → an upcoming appointment → **הכנה לביקור** (visit prep). One page with what changed since the last visit in the same
+field (or any visit, or one year back): new results, results still out of range, medications started, active medications,
+diagnoses, allergies, your notes and documents you uploaded.
+
 ## 5a. Add a document from a private doctor or hospital
 1. **Documents** tab → **הוספת מסמך** (add document).
 2. Take a photo of each page (phone) or choose a PDF or picture file.

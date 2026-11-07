@@ -57,7 +57,9 @@ class SyncService : Service() {
                 val engine = SyncEngine(caller, store, onProgress = { progress(it) }, files = com.myehr.app.data.AndroidVault(this@SyncService))
                 val people = engine.syncFamily(switcher)
                 done("הסנכרון הסתיים: ${people.joinToString(", ") { it.name }}" + (if (engine.failures.isEmpty()) "" else " (חלק מהפריטים לא נטענו)"))
-                SyncState.set(SyncState.Status(text = "הסנכרון הסתיים" + SyncState.missing(engine.failures), finishedAt = System.currentTimeMillis()))
+                val news = SyncState.newResultsText(engine.newResults)
+                if (news.isNotEmpty()) resultsAlert(news)
+                SyncState.set(SyncState.Status(text = "הסנכרון הסתיים" + (if (news.isNotEmpty()) "\n$news" else "") + SyncState.missing(engine.failures), finishedAt = System.currentTimeMillis()))
             } catch (e: SessionExpired) {
                 done("החיבור למאוחדת נותק. פתחו את MyEHR והתחברו שוב.")
                 SyncState.set(SyncState.Status(text = "יש להתחבר שוב", needsLogin = true))
@@ -87,8 +89,25 @@ class SyncService : Service() {
         getSystemService(NotificationManager::class.java).notify(ID_DONE, notification(text, ongoing = false))
 
     private fun channel() {
-        getSystemService(NotificationManager::class.java)
-            .createNotificationChannel(NotificationChannel(CHANNEL, "סנכרון ממאוחדת", NotificationManager.IMPORTANCE_LOW))
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.createNotificationChannel(NotificationChannel(CHANNEL, "סנכרון ממאוחדת", NotificationManager.IMPORTANCE_LOW))
+        nm.createNotificationChannel(NotificationChannel(CHANNEL_RESULTS, "תוצאות חדשות", NotificationManager.IMPORTANCE_DEFAULT))
+    }
+
+    /** "New results" alert. Only counts and first names; hidden on the lock screen (VISIBILITY_PRIVATE). */
+    private fun resultsAlert(text: String) {
+        val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+        val n = Notification.Builder(this, CHANNEL_RESULTS)
+            .setSmallIcon(R.drawable.ic_lab)
+            .setContentTitle("תוצאות חדשות במאוחדת")
+            .setContentText(text)
+            .setStyle(Notification.BigTextStyle().bigText(text))
+            .setAutoCancel(true)
+            .setContentIntent(open)
+            .setVisibility(Notification.VISIBILITY_PRIVATE)
+            .setPublicVersion(Notification.Builder(this, CHANNEL_RESULTS).setSmallIcon(R.drawable.ic_lab).setContentTitle("MyEHR").setContentText("יש תוצאות חדשות").build())
+            .build()
+        getSystemService(NotificationManager::class.java).notify(ID_RESULTS, n)
     }
 
     private fun notification(text: String, ongoing: Boolean): Notification {
@@ -109,6 +128,8 @@ class SyncService : Service() {
         private const val CHANNEL = "sync"
         private const val ID_PROGRESS = 1
         private const val ID_DONE = 2
+        private const val ID_RESULTS = 3
+        private const val CHANNEL_RESULTS = "results"
         fun start(context: Context) = context.startForegroundService(Intent(context, SyncService::class.java))
     }
 }

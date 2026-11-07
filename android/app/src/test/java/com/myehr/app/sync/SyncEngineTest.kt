@@ -93,6 +93,27 @@ class SyncEngineTest {
         assertEquals(2, fileCalls.size) // already saved: not downloaded again
     }
 
+    @Test fun countsNewResultsAfterFirstSync() = runTest {
+        var stickers = """[{"StickerId":"11","LabCode":"2","TestDate":"2023-06-01T00:00:00"}]"""
+        val detail = """{"testSections":[{"tests":[{"records":[
+            {"title":"A","scale":{"minRange":1,"maxRange":5,"value":"9"}},{"title":"B","scale":{"minRange":1,"maxRange":5,"value":"3"}}]}]}]}"""
+        val caller = Caller { _, path, _ ->
+            when {
+                path.startsWith(Api.MEMBER) -> ok("""{"Id":"000000001","FullName":"Test Person"}""")
+                path.startsWith(Api.LAB_LIST) -> ok("""{"Items":$stickers}""")
+                path.startsWith("/api/labs/") -> ok(detail)
+                else -> ok("{}")
+            }
+        }
+        val sink = Sink()
+        val first = SyncEngine(caller, sink, today = LocalDate.of(2025, 1, 1), pauseMs = 0).also { it.syncCurrent() }
+        assertTrue(first.newResults.isEmpty()) // first sync: everything is "new", no alert
+        stickers = """[{"StickerId":"11","LabCode":"2","TestDate":"2023-06-01T00:00:00"},{"StickerId":"12","LabCode":"2","TestDate":"2024-06-01T00:00:00"}]"""
+        val second = SyncEngine(caller, sink, today = LocalDate.of(2025, 1, 1), pauseMs = 0).also { it.syncCurrent() }
+        assertEquals(mapOf("Test" to (2 to 1)), second.newResults)
+        assertEquals("2 תוצאות חדשות (1 מחוץ לטווח): Test 2", SyncState.newResultsText(second.newResults))
+    }
+
     @Test fun secondSyncFetchesOnlyNewResults() = runTest {
         var stickers = """{"Items":[{"StickerId":"11","LabCode":"2","TestDate":"2023-06-01T00:00:00"}]}"""
         val calls = mutableListOf<String>()
