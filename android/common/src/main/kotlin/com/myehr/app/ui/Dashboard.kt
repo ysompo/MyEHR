@@ -151,7 +151,9 @@ fun Dashboard(
                     val last = s.latest
                     CardRow(
                         title = s.name,
-                        subtitle = fmtDate(last?.date),
+                        subtitle = listOfNotNull(fmtDate(last?.date),
+                            if (last?.normLow != null || last?.normHigh != null) "טווח תקין ${com.myehr.app.data.range(last.normLow, last.normHigh)}" else null,
+                        ).joinToString(" · "),
                         onClick = { onSeries(s.code) },
                         trailing = {
                             Row(verticalAlignment = Alignment.CenterVertically) {

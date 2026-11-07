@@ -11,6 +11,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -78,6 +80,20 @@ class AndroidPlatform(private val context: Context) : Platform {
 
     @Composable override fun UpdateSection() = com.myehr.app.update.UpdateSection()
 
+    @Composable override fun PrivacySettings() {
+        val ctx = LocalContext.current
+        var allow by remember { mutableStateOf(UiPrefs.allowScreenshots(ctx)) }
+        com.myehr.app.ui.SoftCard(androidx.compose.ui.Modifier.fillMaxWidth().padding(start = com.myehr.app.ui.Space.l, end = com.myehr.app.ui.Space.l, top = com.myehr.app.ui.Space.s)) {
+            com.myehr.app.ui.CardRow("לאפשר צילומי מסך", if (allow) "מותר. שימו לב: צילום מסך נשמר בגלריה ועלול להיות מגובה לענן." else "חסום (מומלץ)", divider = false,
+                trailing = {
+                    androidx.compose.material3.Switch(checked = allow, onCheckedChange = { v ->
+                        allow = v; UiPrefs.setAllowScreenshots(ctx, v)
+                        (ctx as? android.app.Activity ?: (ctx as? android.content.ContextWrapper)?.baseContext as? android.app.Activity)?.let(::applyScreenshotSetting)
+                    })
+                })
+        }
+    }
+
     @Composable override fun rememberSaver(onResult: (Boolean) -> Unit) = rememberAndroidSaver(onResult)
 
     @Composable override fun rememberPicker(onPages: (List<com.myehr.app.data.Page>) -> Unit) = rememberAndroidPicker(onPages)
@@ -98,4 +114,6 @@ object UiPrefs {
     fun setTextSize(c: Context, t: TextSize) = prefs(c).edit().putString("text_size", t.name).apply()
     fun look(c: Context): Look = Looks.firstOrNull { it.name == prefs(c).getString("look", null) } ?: PineLook
     fun setLook(c: Context, l: Look) = prefs(c).edit().putString("look", l.name).apply()
+    fun allowScreenshots(c: Context) = prefs(c).getBoolean("allow_screenshots", false)
+    fun setAllowScreenshots(c: Context, v: Boolean) = prefs(c).edit().putBoolean("allow_screenshots", v).apply()
 }

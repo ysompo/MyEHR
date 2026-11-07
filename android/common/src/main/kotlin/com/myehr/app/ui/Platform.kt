@@ -42,6 +42,8 @@ interface Platform {
     @Composable fun UpdateSection()
     /** Camera (phone) and file picker; pages arrive already shrunk for sending. */
     @Composable fun rememberPicker(onPages: (List<com.myehr.app.data.Page>) -> Unit): DocPicker
+    /** Settings row for platform-only privacy options (phone: allow screenshots). */
+    @Composable fun PrivacySettings() {}
     /** Lets the user choose where to save a file; returns the function that starts it. */
     @Composable fun rememberSaver(onResult: (Boolean) -> Unit): (name: String, bytes: ByteArray) -> Unit
     /** Shows one image, or every page of a PDF, inside the app. */

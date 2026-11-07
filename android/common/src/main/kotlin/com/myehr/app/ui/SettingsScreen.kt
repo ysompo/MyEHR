@@ -72,8 +72,9 @@ fun SettingsScreen(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Loo
 
         SectionTitle("פרטיות")
         SoftCard(Modifier.fillMaxWidth().padding(horizontal = Space.l)) {
-            CardRow("המידע נשמר רק בטלפון", "מוצפן, ללא גיבוי לענן וללא שרת", divider = false)
+            CardRow("המידע נשמר רק ${LocalPlatform.current.deviceWord}", "מוצפן, ללא גיבוי לענן וללא שרת", divider = false)
         }
+        LocalPlatform.current.PrivacySettings()
     }
 }
 

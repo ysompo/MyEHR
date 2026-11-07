@@ -32,7 +32,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // No screenshots, and hidden in the recent-apps preview.
-        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        applyScreenshotSetting(this)
         PlatformFonts.family = AndroidPlatform.rubik
         val platform = AndroidPlatform(applicationContext)
         setContent {
@@ -93,4 +93,10 @@ class MainActivity : FragmentActivity() {
 object ExternalPick {
     const val GRACE_MS = 5 * 60_000L
     @Volatile var since = 0L
+}
+
+/** Screenshots are blocked unless the user allowed them in Settings (also hides the app in recent apps). */
+fun applyScreenshotSetting(a: android.app.Activity) {
+    if (UiPrefs.allowScreenshots(a)) a.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+    else a.window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
 }

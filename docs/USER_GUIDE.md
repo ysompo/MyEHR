@@ -87,6 +87,7 @@ and instructions for an AI assistant (Claude, ChatGPT) that reads the folder.
 - **API key** for questions.
 - **Updates:** **בדיקת עדכונים** (check for updates).
 - **Export:** see 5c.
+- **Screenshots (phone):** blocked by default. Turn on **לאפשר צילומי מסך** under Privacy if you need them; screenshots go to your gallery and may be backed up to the cloud.
 
 ## 7. Updates
 - The app checks once a day and shows a banner when a new version is available.
