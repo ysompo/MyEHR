@@ -85,6 +85,10 @@ Not covered: ferritin and platelets (no general published range found on PubMed 
 
 If sex or age is unknown, or the unit differs, no general range is shown.
 
+## 4a2. Search
+Home → the magnifying glass. Type any word (test, medication, document, doctor, diagnosis, clinic). Results are grouped;
+tap one to open it. The search runs on the device only; nothing is sent.
+
 ## 4b. New-result alert
 After a sync (not the first one), the phone shows "תוצאות חדשות" with how many new results came in, how many are out of range,
 and for whom. Test names and values are not shown; on the lock screen it only says there are new results.

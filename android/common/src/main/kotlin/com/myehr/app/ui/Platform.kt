@@ -11,7 +11,7 @@ import com.myehr.app.data.Visit
 enum class Ic(val file: String) {
     HOME("ic_home"), LAB("ic_lab"), ASK("ic_ask"), PILL("ic_pill"), DOC("ic_doc"), SYNC("ic_sync"),
     SETTINGS("ic_settings"), BACK("ic_back"), ARROW_UP("ic_arrow_up"), ARROW_DOWN("ic_arrow_down"),
-    CHECK("ic_check"), CALENDAR("ic_calendar"),
+    CHECK("ic_check"), CALENDAR("ic_calendar"), SEARCH("ic_search"),
 }
 
 /** Secrets kept by the platform (Android Keystore / OS keychain). */

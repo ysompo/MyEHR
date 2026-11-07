@@ -40,6 +40,7 @@ private sealed interface Sub {
     data class LabVisitDetail(val stickerId: String) : Sub
     data class LabHistory(val code: String) : Sub
     data object AddDoc : Sub
+    data object Search : Sub
     data class Prep(val visit: com.myehr.app.data.Visit) : Sub
     data object Export : Sub
     data class ViewFile(val fileId: String, val title: String) : Sub
@@ -108,6 +109,19 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
                 Sub.Export -> { SubHeader("ייצוא התיק") { sub = Sub.Settings }; if (person != null) ExportScreen(people, person) }
                 is Sub.Prep -> { SubHeader("הכנה לביקור") { sub = null }
                     if (person != null) VisitPrepScreen(load(null, s, person.id, refresh) { repo.visitPrep(person.id, s.visit) }) }
+                Sub.Search -> { SubHeader("חיפוש") { sub = null }
+                    if (person != null) SearchScreen(person.id) { h ->
+                        sub = when (val t = h.target) {
+                            is com.myehr.app.data.Hit.Target.Series -> Sub.LabHistory(t.code)
+                            is com.myehr.app.data.Hit.Target.Upload -> Sub.ViewUpload(t.id)
+                            is com.myehr.app.data.Hit.Target.Doc -> t.doc.guid?.let { com.myehr.app.sync.meuhedetFileId(person.id, "doc", it + t.doc.documentKey) }
+                                ?.takeIf { platform.files.has(it) }?.let { Sub.ViewFile(it, t.doc.title) } ?: run { tab = Tab.DOCS; null }
+                            com.myehr.app.data.Hit.Target.Meds -> { tab = Tab.MEDS; null }
+                            com.myehr.app.data.Hit.Target.Visits -> { tab = Tab.VISITS; null }
+                            com.myehr.app.data.Hit.Target.Home -> { tab = Tab.HOME; null }
+                            com.myehr.app.data.Hit.Target.None -> sub
+                        }
+                    } }
                 Sub.AddDoc -> { SubHeader("הוספת מסמך") { sub = null }; if (person != null) AddDocScreen(people, person) { refresh++; sub = null } }
                 is Sub.ViewUpload -> { SubHeader("מסמך שהעליתם") { sub = null }
                     if (person != null) UploadView(person.id, load(null, s, person.id) { repo.upload(person.id, s.id) }) { refresh++; sub = null } }
@@ -123,7 +137,7 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
                             platform.UpdateBanner()
                             val d = load(null, id, refresh) { repo.dashboard(people, person) }
                             if (d != null) Dashboard(d, onPerson = { personId = it }, onAsk = { askPrefill = it; tab = Tab.ASK },
-                                onSeries = { sub = Sub.LabHistory(it) }, onSync = { sub = Sub.Sync }, onSettings = { sub = Sub.Settings }, onConditionsChanged = { refresh++ })
+                                onSeries = { sub = Sub.LabHistory(it) }, onSync = { sub = Sub.Sync }, onSettings = { sub = Sub.Settings }, onConditionsChanged = { refresh++ }, onSearch = { sub = Sub.Search })
                         }
                         Tab.LABS -> LabsScreen(load(emptyList(), id, refresh) { repo.labSeries(id) }, load(emptyList(), id) { repo.labVisits(id) },
                             byTest, { byTest = it }, { sub = Sub.LabHistory(it.code) }, { sub = Sub.LabVisitDetail(it.stickerId) })

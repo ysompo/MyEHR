@@ -48,6 +48,7 @@ fun Dashboard(
     onSeries: (String) -> Unit,
     onSync: () -> Unit,
     onSettings: () -> Unit,
+    onSearch: () -> Unit = {},
     onConditionsChanged: () -> Unit = {},
 ) {
     val bigText = androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.25f
@@ -56,6 +57,7 @@ fun Dashboard(
         item {
             Row(Modifier.fillMaxWidth().padding(start = Space.xl, end = Space.s, top = Space.m), verticalAlignment = Alignment.CenterVertically) {
                 Text("MyEHR", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+                IconButton(onClick = onSearch) { AppIcon(Ic.SEARCH, "חיפוש") }
                 IconButton(onClick = onSync) { AppIcon(Ic.SYNC, "סנכרון") }
                 IconButton(onClick = onSettings) { AppIcon(Ic.SETTINGS, "הגדרות") }
             }

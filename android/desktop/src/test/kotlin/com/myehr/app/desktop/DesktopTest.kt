@@ -87,6 +87,11 @@ class DesktopTest {
         renderTo("desktop_adddoc.png", platform) { com.myehr.app.ui.AddDocScreen(s.people(), s.people().first { it.id == id }) {} }
         renderTo("desktop_prep.png", platform) { com.myehr.app.ui.VisitPrepScreen(repo.visitPrep(id, com.myehr.app.data.Visit("2026-12-01T09:00:00", null, "קרדיולוגיה", "ד\"ר לדוגמה", null, true)).copy(since = "2024-01-01")
             .let { p -> p.copy(newResults = repo.labSeries(id).flatMap { s0 -> s0.points.filter { (it.date ?: "") > "2024-01-01" }.map { s0 to it } }) }) }
+        assertTrue(repo.search(id, "המוגלובין").any { it.target is com.myehr.app.data.Hit.Target.Series })
+        assertTrue(repo.search(id, "פניציל").any { it.group == "אבחנות והערות" })
+        assertTrue(repo.search(id, "פרטית").any { it.group == "מסמכים" }) // uploaded document by its source
+        assertTrue(repo.search(id, "סטטין 20").any { it.group == "תרופות" })
+        assertTrue(repo.search(id, "zzz").isEmpty())
         renderTo("desktop_docs.png", platform) { com.myehr.app.ui.DocsScreen(emptyList(), emptyList(), emptyList(), repo.uploads(id)) }
         ImageComposeScene(width = 640, height = 1100, density = Density(1f)) {
             CompositionLocalProvider(LocalPlatform provides platform) {

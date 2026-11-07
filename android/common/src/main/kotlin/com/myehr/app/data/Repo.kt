@@ -81,6 +81,36 @@ class Repo(private val store: RecordStore) {
         )
     }
 
+    /** Searches everything stored for this person, on the device only. Every word must appear. */
+    fun search(p: String, query: String): List<Hit> {
+        val words = query.lowercase().split(Regex("\\s+")).map { it.filter { c -> c.isLetterOrDigit() || c == '.' } }.filter { it.isNotEmpty() }
+        if (words.isEmpty()) return emptyList()
+        fun ok(vararg parts: String?) = parts.filterNotNull().joinToString(" ").lowercase().let { t -> words.all { it in t } }
+        val hits = mutableListOf<Hit>()
+        labSeries(p).filter { ok(it.name, it.unit) }.forEach { s ->
+            val l = s.latest
+            hits += Hit("בדיקות", s.name, listOfNotNull(l?.resultText?.let { v -> listOfNotNull(v, s.unit).joinToString(" ") }, fmtDate(l?.date)).joinToString(" · "), Hit.Target.Series(s.code))
+        }
+        aiData(p).medications().filter { ok(it.name) }.forEach { m ->
+            hits += Hit("תרופות", m.name, listOfNotNull(m.firstPurchase?.let { "מ-${fmtDate(it)}" }, if (m.active) "פעילה" else null, m.source).joinToString(" · "), Hit.Target.Meds)
+        }
+        conditions(p).filter { ok(it.text, Condition.labels[it.type]) }.forEach { c ->
+            hits += Hit("אבחנות והערות", c.text, listOfNotNull(Condition.labels[c.type], c.date?.let(::fmtDate)).joinToString(" · "), Hit.Target.Home)
+        }
+        uploads(p).filter { u -> ok(u.title, u.source, u.type, *u.labs.map { it.name }.toTypedArray(), *u.meds.map { it.name }.toTypedArray()) }.forEach { u ->
+            hits += Hit("מסמכים", listOfNotNull(u.title, u.source).joinToString(" · ").ifEmpty { "מסמך" }, fmtDate(u.date), Hit.Target.Upload(u.id))
+        }
+        documents(p).filter { ok(it.title, it.type, it.doctor, it.specialty) }.forEach { d ->
+            hits += Hit("מסמכים", d.title, listOfNotNull(fmtDate(d.date), d.doctor, d.specialty).joinToString(" · "), Hit.Target.Doc(d))
+        }
+        (upcomingVisits(p) + pastVisits(p)).filter { ok(it.specialty, it.doctor, it.place) }.forEach { v ->
+            hits += Hit("ביקורים", listOfNotNull(v.specialty, v.doctor).joinToString(" · ").ifEmpty { "ביקור" }, listOfNotNull(fmtDate(v.start), v.place).joinToString(" · "), Hit.Target.Visits)
+        }
+        examinations(p).filter { ok(it.description, it.institute) }.forEach { e -> hits += Hit("מסמכים", e.description, listOfNotNull(fmtDate(e.date), e.institute).joinToString(" · "), Hit.Target.None) }
+        vaccines(p).filter { ok(it.name, "חיסון") }.forEach { v -> hits += Hit("חיסונים", v.name, fmtDate(v.date), Hit.Target.None) }
+        return hits
+    }
+
     /** Test codes and names this person already has, so a document's tests can be linked to them. */
     fun knownTests(p: String): List<Pair<String, String>> =
         store.all(p, Kind.LAB_HISTORY).mapNotNull { (code, json) -> Parsers.labSeries(code, json)?.let { code to it.name } }
@@ -164,6 +194,19 @@ fun mergeUploads(series: List<LabSeries>, uploads: List<Upload>): List<LabSeries
         }
     }
     return out.values.toList()
+}
+
+/** One search result and where tapping it goes. */
+data class Hit(val group: String, val title: String, val subtitle: String, val target: Target) {
+    sealed interface Target {
+        data class Series(val code: String) : Target
+        data class Upload(val id: String) : Target
+        data class Doc(val doc: MedDocument) : Target
+        data object Meds : Target
+        data object Visits : Target
+        data object Home : Target
+        data object None : Target
+    }
 }
 
 data class VisitPrep(
