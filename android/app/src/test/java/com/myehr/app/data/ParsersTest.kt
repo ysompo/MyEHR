@@ -62,6 +62,9 @@ class ParsersTest {
         assertEquals(5.6, GeneralRanges.find("HEMOGLOBIN A1C", "%", man, "2026-10-28")!!.high!!, 0.0)
         assertEquals(13.0, GeneralRanges.find("HEMOGLOBIN", "g/dL", man, "2026-10-28")!!.low!!, 0.0)
         assertNull(GeneralRanges.find("GLUCOSE - URINE", "mg/dL", man, "2026-10-28"))
+        GeneralRanges.find("TSH", "µIU/mL", man, "2026-10-28")!!.let { assertEquals(0.45, it.low!!, 0.0); assertEquals(4.12, it.high!!, 0.0) }
+        assertEquals(60.0, GeneralRanges.find("eGFR", "mL/min/1.73m2", man, "2026-10-28")!!.low!!, 0.0)
+        assertNull(GeneralRanges.find("eGFR", "mL/min/1.73m2", child, "2026-10-28"))
     }
 
     @Test fun labSeriesCautions() {

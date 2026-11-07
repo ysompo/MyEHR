@@ -16,6 +16,8 @@ object Sources {
     val WHO_HB = RangeSource("WHO hemoglobin cutoffs 2024 (summary), Indian Pediatr 2024", "38910369")
     val ACG_ALT = RangeSource("ACG liver chemistries guideline, Am J Gastroenterol 2017", "27995906")
     val SAFETY_ALT = RangeSource("SAFETY study (children), Gastroenterology 2010", "20064512")
+    val NHANES_TSH = RangeSource("NHANES III thyroid reference, JCEM 2002", "11836274")
+    val KDIGO = RangeSource("KDIGO 2024 chronic kidney disease guideline, Kidney Int", "38490803")
 }
 
 enum class Sex { M, F }
@@ -23,7 +25,9 @@ enum class Sex { M, F }
 /** One band: applies to [sex] (null = both) between ages [fromAge, toAge) in years. */
 class Band(val sex: Sex?, val fromAge: Double, val toAge: Double, val low: Double?, val high: Double?, val source: RangeSource)
 
-private class Test(val units: Set<String>, val matches: (String) -> Boolean, val bands: List<Band>)
+private class Test(val units: Set<String>, val matches: (String) -> Boolean, val bands: List<Band>, val unitOk: ((String) -> Boolean)? = null) {
+    fun unitMatches(u: String) = unitOk?.invoke(u) ?: (u in units)
+}
 
 /** Words of a test name, lower case, Latin and Hebrew letters/digits only. */
 private fun tokens(name: String) = name.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotEmpty() }
@@ -78,6 +82,14 @@ private val TESTS = listOf(
         Band(Sex.M, 18.0, 200.0, null, 33.0, Sources.ACG_ALT),
         Band(Sex.F, 18.0, 200.0, null, 25.0, Sources.ACG_ALT),
     )),
+    // TSH (mIU/L = µIU/mL), age 12+: 2.5th–97.5th percentile of the NHANES III reference population.
+    Test(setOf("miu/l", "uiu/ml", "mu/l", "miu/ml"), { n -> tokens(n).any { it == "tsh" } || "תירוטרופין" in flat(n) }, listOf(
+        Band(null, 12.0, 200.0, 0.45, 4.12, Sources.NHANES_TSH),
+    )),
+    // eGFR (mL/min/1.73m²), adults: below 60 is the KDIGO threshold for chronic kidney disease (G3a–G5).
+    Test(emptySet(), { n -> flat(n).let { "egfr" in it || ("gfr" in it && "מחושב" in it) } }, listOf(
+        Band(null, 18.0, 200.0, 60.0, null, Sources.KDIGO),
+    ), unitOk = { it.startsWith("ml/min") }),
 )
 
 /** The person's sex and birth date, as far as the member record says. */
@@ -94,9 +106,9 @@ data class Demographics(val sex: Sex?, val birth: LocalDate?, val ageNow: Double
 object GeneralRanges {
     /** A general range for this test, person and date, or null when none applies. */
     fun find(testName: String, unit: String?, who: Demographics, date: String?): Band? {
-        val u = unit?.lowercase()?.replace(" ", "") ?: return null
+        val u = unit?.lowercase()?.replace(" ", "")?.replace('µ', 'u')?.replace('μ', 'u') ?: return null
         val age = who.ageOn(date) ?: return null
-        val test = TESTS.firstOrNull { u in it.units && it.matches(testName) } ?: return null
+        val test = TESTS.firstOrNull { it.unitMatches(u) && it.matches(testName) } ?: return null
         return test.bands.firstOrNull { b -> age >= b.fromAge && age < b.toAge && (b.sex == null || b.sex == who.sex) }
     }
 

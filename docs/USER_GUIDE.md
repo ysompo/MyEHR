@@ -70,6 +70,11 @@ When Meuhedet sends no normal range for a result, the app shows a published gene
 | Hemoglobin (lower limit, by age and sex) | g/dL | WHO 2024 cutoffs, summary: [PubMed 38910369](https://pubmed.ncbi.nlm.nih.gov/38910369/) |
 | ALT (adults) | U/L | ACG guideline 2017: [PubMed 27995906](https://pubmed.ncbi.nlm.nih.gov/27995906/) |
 | ALT (under 18) | U/L | SAFETY study 2010: [PubMed 20064512](https://pubmed.ncbi.nlm.nih.gov/20064512/) |
+| TSH (age 12+), 0.45–4.12 | mIU/L | NHANES III, JCEM 2002: [PubMed 11836274](https://pubmed.ncbi.nlm.nih.gov/11836274/) |
+| eGFR (adults), 60 or more | mL/min/1.73m² | KDIGO 2024: [PubMed 38490803](https://pubmed.ncbi.nlm.nih.gov/38490803/) |
+
+Not covered on purpose: vitamin B12 (the guideline says no fixed cutoff; use the lab's), ferritin and white cells/platelets
+(no general published range found on PubMed that fits), creatinine (depends on the lab method).
 
 If sex or age is unknown, or the unit differs, no general range is shown.
 
