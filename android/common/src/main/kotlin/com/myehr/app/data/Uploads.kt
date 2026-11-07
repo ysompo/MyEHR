@@ -62,6 +62,7 @@ interface FileVault {
     fun put(id: String, bytes: ByteArray)
     fun get(id: String): ByteArray?
     fun delete(id: String)
+    fun has(id: String): Boolean = get(id) != null
 }
 
 object UpKind {

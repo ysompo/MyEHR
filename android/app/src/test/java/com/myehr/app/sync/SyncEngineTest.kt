@@ -63,6 +63,36 @@ class SyncEngineTest {
         assertTrue(sink.raw.containsKey(Triple("000000001", Kind.APPOINTMENTS, "")))
     }
 
+    @Test fun savesNewPdfsOnce() = runTest {
+        val vault = object : com.myehr.app.data.FileVault {
+            val m = mutableMapOf<String, ByteArray>()
+            override fun put(id: String, bytes: ByteArray) { m[id] = bytes }
+            override fun get(id: String) = m[id]
+            override fun delete(id: String) { m.remove(id) }
+        }
+        val fileCalls = mutableListOf<String>()
+        val pdfB64 = java.util.Base64.getEncoder().encodeToString("%PDF-1.4 fake".toByteArray())
+        val caller = object : Caller {
+            override suspend fun call(method: String, path: String, body: String?) = when {
+                path.startsWith(Api.MEMBER) -> ok("""{"Id":"000000001","FullName":"Test Person"}""")
+                path.startsWith(Api.LAB_LIST) -> ok("""{"Items":[{"StickerId":"11","LabCode":"2","TestDate":"2023-06-01T00:00:00"}]}""")
+                path.startsWith(Api.DOCUMENTS) -> ok("""{"Items":[{"DocumentDescription":"D","DocumentGuid":"g1","DocumentKey":"k1","Available":true}]}""")
+                else -> ok("{}")
+            }
+            override suspend fun file(path: String): ByteArray? {
+                fileCalls += path
+                return if (path.contains("/pdf/")) "%PDF-1.4 fake".toByteArray() else """{"File":"$pdfB64"}""".toByteArray()
+            }
+        }
+        val e = SyncEngine(caller, Sink(), today = LocalDate.of(2025, 1, 1), pauseMs = 0, files = vault)
+        e.syncCurrent()
+        assertEquals(2, vault.m.size)
+        assertTrue(vault.m.values.all { String(it).startsWith("%PDF-") })
+        assertTrue(vault.has(meuhedetFileId("000000001", "lab", "11")))
+        SyncEngine(caller, Sink(), today = LocalDate.of(2025, 1, 1), pauseMs = 0, files = vault).syncCurrent()
+        assertEquals(2, fileCalls.size) // already saved: not downloaded again
+    }
+
     @Test fun secondSyncFetchesOnlyNewResults() = runTest {
         var stickers = """{"Items":[{"StickerId":"11","LabCode":"2","TestDate":"2023-06-01T00:00:00"}]}"""
         val calls = mutableListOf<String>()

@@ -64,6 +64,7 @@ class DesktopVault(private val dir: File = File(appDir, "files"), dataKey: () ->
     override fun put(id: String, bytes: ByteArray) = f(id).writeBytes(crypto.encBytes(bytes))
     override fun get(id: String): ByteArray? = f(id).takeIf { it.exists() }?.let { crypto.decBytes(it.readBytes()) }
     override fun delete(id: String) { f(id).delete() }
+    override fun has(id: String) = f(id).exists()
 }
 
 /** Encrypted local store, same layout as the Android one. */

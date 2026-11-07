@@ -68,9 +68,24 @@ class DesktopCaller : Caller {
             else -> b.header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body))
         }
         runCatching {
-            val r = client.send(b.build(), HttpResponse.BodyHandlers.ofString())
+            val r = client.send(b.build(), HttpResponse.BodyHandlers.ofString(Charsets.UTF_8))
             Resp(r.statusCode(), r.headers().firstValue("content-type").orElse(""), r.body(), r.uri().toString())
         }.getOrElse { Resp(0, "", "", "") }
+    }
+
+    override suspend fun file(path: String): ByteArray? = withContext(Dispatchers.IO) {
+        val req = HttpRequest.newBuilder(URI("$ORIGIN$path")).timeout(Duration.ofSeconds(90)).GET()
+            .header("Accept", "application/pdf, application/json, */*")
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("locale", "he-IL")
+            .header("x-platform", "1")
+            .header("User-Agent", Session.userAgent)
+            .header("Referer", "$ORIGIN/")
+            .build()
+        runCatching {
+            val r = client.send(req, HttpResponse.BodyHandlers.ofByteArray())
+            if (r.statusCode() != 200 || r.headers().firstValue("content-type").orElse("").contains("html")) null else r.body()
+        }.getOrNull()
     }
 }
 
@@ -116,7 +131,7 @@ object DesktopSync {
     private suspend fun runSync(store: DesktopStore) {
         SyncState.set(SyncState.Status(running = true, text = "מתחיל סנכרון…"))
         try {
-            val engine = SyncEngine(DesktopCaller(), store, onProgress = { SyncState.set(SyncState.Status(running = true, text = it)) })
+            val engine = SyncEngine(DesktopCaller(), store, onProgress = { SyncState.set(SyncState.Status(running = true, text = it)) }, files = DesktopVault())
             val people = engine.syncFamily(MemberSwitcher { Session.selectMember(it) })
             SyncState.set(SyncState.Status(text = "הסנכרון הסתיים: ${people.joinToString(", ") { it.name }}" + SyncState.missing(engine.failures), finishedAt = System.currentTimeMillis()))
         } catch (e: SessionExpired) {

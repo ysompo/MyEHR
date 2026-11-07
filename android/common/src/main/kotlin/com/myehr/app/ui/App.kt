@@ -40,6 +40,7 @@ private sealed interface Sub {
     data class LabVisitDetail(val stickerId: String) : Sub
     data class LabHistory(val code: String) : Sub
     data object AddDoc : Sub
+    data class ViewFile(val fileId: String, val title: String) : Sub
     data class ViewUpload(val id: String) : Sub
 }
 
@@ -92,7 +93,16 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
             when (val s = sub) {
                 Sub.Sync -> { SubHeader("סנכרון ממאוחדת") { sub = null }; platform.SyncContent(onDone = { refresh++; sub = null }) }
                 Sub.Settings -> { SubHeader("הגדרות") { sub = null }; SettingsScreen(textSize, onTextSize, look, onLook, hasKey) { secrets.apiKey = null; hasKey = false } }
-                is Sub.LabVisitDetail -> { SubHeader("תוצאות בדיקה") { sub = null }; LabDetailScreen(load(null, s, person?.id) { person?.let { repo.labDetail(it.id, s.stickerId) } }) }
+                is Sub.LabVisitDetail -> { SubHeader("תוצאות בדיקה") { sub = null }
+                    if (person != null) {
+                        val fid = com.myehr.app.sync.meuhedetFileId(person.id, "lab", s.stickerId)
+                        if (remember(fid) { platform.files.has(fid) }) androidx.compose.material3.TextButton(onClick = { sub = Sub.ViewFile(fid, "תוצאות בדיקה (PDF)") },
+                            modifier = Modifier.padding(horizontal = Space.s)) { Text("פתיחת קובץ ה-PDF של מאוחדת") }
+                    }
+                    LabDetailScreen(load(null, s, person?.id) { person?.let { repo.labDetail(it.id, s.stickerId) } }) }
+                is Sub.ViewFile -> { SubHeader(s.title) { sub = null }
+                    val bytes = load<ByteArray?>(null, s) { platform.files.get(s.fileId) }
+                    if (bytes != null) androidx.compose.foundation.lazy.LazyColumn { item { platform.PageView(com.myehr.app.data.Page(bytes, "application/pdf"), Modifier.padding(Space.s)) } } }
                 Sub.AddDoc -> { SubHeader("הוספת מסמך") { sub = null }; if (person != null) AddDocScreen(people, person) { refresh++; sub = null } }
                 is Sub.ViewUpload -> { SubHeader("מסמך שהעליתם") { sub = null }
                     if (person != null) UploadView(person.id, load(null, s, person.id) { repo.upload(person.id, s.id) }) { refresh++; sub = null } }
@@ -116,7 +126,9 @@ fun App(textSize: TextSize, onTextSize: (TextSize) -> Unit, look: Look = PineLoo
                         Tab.MEDS -> MedsScreen(load(emptyList(), id) { repo.activeMeds(id) }, load(emptyList(), id) { repo.prescriptions(id) }, load(emptyList(), id) { repo.purchases(id) }, load(emptyList(), id, refresh) { repo.uploadedMeds(id) })
                         Tab.VISITS -> VisitsScreen(load(emptyList(), id, refresh) { repo.upcomingVisits(id) }, load(emptyList(), id, refresh) { repo.pastVisits(id) })
                         Tab.DOCS -> DocsScreen(load(emptyList(), id) { repo.documents(id) }, load(emptyList(), id) { repo.vaccines(id) }, load(emptyList(), id) { repo.examinations(id) },
-                            load(emptyList(), id, refresh) { repo.uploads(id) }, onAdd = { sub = Sub.AddDoc }, onOpen = { sub = Sub.ViewUpload(it.id) })
+                            load(emptyList(), id, refresh) { repo.uploads(id) }, onAdd = { sub = Sub.AddDoc }, onOpen = { sub = Sub.ViewUpload(it.id) },
+                            fileOf = { d -> d.guid?.let { com.myehr.app.sync.meuhedetFileId(id, "doc", it + d.documentKey) }?.takeIf { platform.files.has(it) } },
+                            onOpenFile = { fid, title -> sub = Sub.ViewFile(fid, title) })
                     }
                 }
             }

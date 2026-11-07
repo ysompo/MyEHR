@@ -60,4 +60,20 @@ class NativeCaller(private val userAgent: String) : Caller {
             }
         }.getOrElse { Resp(0, "", "", "") }
     }
+
+    override suspend fun file(path: String): ByteArray? = withContext(Dispatchers.IO) {
+        val req = Request.Builder().url("https://online.meuhedet.co.il$path").get()
+            .header("Accept", "application/pdf, application/json, */*")
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("locale", "he-IL")
+            .header("x-platform", "1")
+            .header("User-Agent", userAgent)
+            .header("Referer", "https://online.meuhedet.co.il/")
+            .build()
+        runCatching {
+            client.newCall(req).execute().use { r ->
+                if (r.code != 200 || r.header("content-type").orEmpty().contains("html")) null else r.body?.bytes()
+            }
+        }.getOrNull()
+    }
 }

@@ -54,7 +54,7 @@ class SyncService : Service() {
             }
             try {
                 val store = Store.get(this@SyncService)
-                val engine = SyncEngine(caller, store, onProgress = { progress(it) })
+                val engine = SyncEngine(caller, store, onProgress = { progress(it) }, files = com.myehr.app.data.AndroidVault(this@SyncService))
                 val people = engine.syncFamily(switcher)
                 done("הסנכרון הסתיים: ${people.joinToString(", ") { it.name }}" + (if (engine.failures.isEmpty()) "" else " (חלק מהפריטים לא נטענו)"))
                 SyncState.set(SyncState.Status(text = "הסנכרון הסתיים" + SyncState.missing(engine.failures), finishedAt = System.currentTimeMillis()))

@@ -13,6 +13,23 @@ data class Resp(val status: Int, val contentType: String, val text: String, val 
 /** Makes a same-origin request from the logged-in page (cookies included). */
 fun interface Caller {
     suspend fun call(method: String, path: String, body: String?): Resp
+    /** A file's raw bytes (GET), or null when it can't be fetched. */
+    suspend fun file(path: String): ByteArray? = null
+}
+
+/** Vault id of a Meuhedet file: a hash, so no ID number or document key shows in file names. */
+fun meuhedetFileId(person: String, what: String, key: String): String =
+    "m_" + java.security.MessageDigest.getInstance("SHA-256").digest("$person|$what|$key".toByteArray())
+        .joinToString("") { "%02x".format(it) }.take(32)
+
+/** A PDF from a file answer: the bytes themselves, or a base64 PDF inside a JSON answer. */
+fun pdfFrom(raw: ByteArray?): ByteArray? {
+    if (raw == null || raw.size < 5) return null
+    if (String(raw, 0, 5, Charsets.ISO_8859_1) == "%PDF-") return raw
+    val text = runCatching { String(raw, Charsets.UTF_8) }.getOrNull() ?: return null
+    val b64 = Regex("\"(JVBER[A-Za-z0-9+/=\\\\]+)\"").find(text)?.groupValues?.get(1)
+        ?.replace("\\r", "")?.replace("\\n", "")?.replace("\\/", "/") ?: return null
+    return runCatching { java.util.Base64.getMimeDecoder().decode(b64) }.getOrNull()?.takeIf { it.size > 4 && String(it, 0, 5, Charsets.ISO_8859_1) == "%PDF-" }
 }
 
 /** Where raw answers go. */
@@ -91,6 +108,8 @@ class SyncEngine(
     private val pauseMs: Long = 250,
     private val onProgress: (String) -> Unit = {},
     private val clock: () -> Long = System::currentTimeMillis,
+    /** Where lab-result and document PDFs are saved; null = don't download files. */
+    private val files: com.myehr.app.data.FileVault? = null,
 ) {
     companion object { const val RESUME_WINDOW_MS = 6 * 3600_000L }
 
@@ -147,6 +166,26 @@ class SyncEngine(
             switcher.select(null)
         }
         return done
+    }
+
+    /** Downloads PDFs not saved yet: lab results and documents. Lab PDFs never change; documents rarely. */
+    private suspend fun savePdfs(id: String) {
+        val vault = files ?: return
+        val wanted = Parsers.labVisits(sink.get(id, Kind.LAB_LIST, "")).mapNotNull { v ->
+            val day = v.date?.take(10)?.replace("-", "") ?: return@mapNotNull null
+            meuhedetFileId(id, "lab", v.stickerId) to Api.labPdf(v.labCode, v.stickerId, day)
+        } + Parsers.documents(sink.get(id, Kind.DOCUMENTS, "")).filter { it.available && it.guid != null }.map { d ->
+            meuhedetFileId(id, "doc", d.guid!! + d.documentKey) to Api.documentPdf(d.guid, d.documentKey.orEmpty(), d.formCode.orEmpty(), d.formSourceSystem.orEmpty())
+        }
+        val missing = wanted.filter { (fid, _) -> !vault.has(fid) }
+        var failed = 0
+        missing.forEachIndexed { i, (fid, path) ->
+            onProgress("שמירת קבצי PDF ${i + 1}/${missing.size}")
+            val pdf = pdfFrom(caller.file(path))
+            if (pdf != null) vault.put(fid, pdf) else failed++
+            if (pauseMs > 0) delay(pauseMs)
+        }
+        if (failed > 0) failures += "$failed קבצי PDF ($who)"
     }
 
     suspend fun syncCurrent(): Person {
@@ -206,6 +245,8 @@ class SyncEngine(
         json("GET", Api.PASSPORT)?.let { sink.put(id, Kind.PASSPORT, "", it) }
         onProgress("תורים")
         json("POST", Api.APPOINTMENTS)?.let { sink.put(id, Kind.APPOINTMENTS, "", it) }
+
+        if (files != null) savePdfs(id)
 
         val done = person.copy(lastSync = System.currentTimeMillis())
         sink.putPerson(done)

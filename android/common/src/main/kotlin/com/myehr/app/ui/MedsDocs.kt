@@ -52,7 +52,8 @@ fun MedsScreen(active: List<Medication>, prescriptions: List<Prescription>, purc
 
 @Composable
 fun DocsScreen(docs: List<MedDocument>, vaccines: List<Vaccine>, exams: List<Examination>,
-               uploads: List<com.myehr.app.data.Upload> = emptyList(), onAdd: () -> Unit = {}, onOpen: (com.myehr.app.data.Upload) -> Unit = {}) {
+               uploads: List<com.myehr.app.data.Upload> = emptyList(), onAdd: () -> Unit = {}, onOpen: (com.myehr.app.data.Upload) -> Unit = {},
+               fileOf: (MedDocument) -> String? = { null }, onOpenFile: (String, String) -> Unit = { _, _ -> }) {
     LazyColumn(contentPadding = PaddingValues(bottom = Space.xl)) {
         item {
             androidx.compose.material3.Button(onClick = onAdd, modifier = Modifier.padding(start = Space.l, end = Space.l, top = Space.l)) {
@@ -62,10 +63,14 @@ fun DocsScreen(docs: List<MedDocument>, vaccines: List<Vaccine>, exams: List<Exa
         group("מסמכים שהעליתם", Ic.DOC, uploads.map { u ->
             Line(listOfNotNull(u.title, u.source).joinToString(" · ").ifEmpty { "מסמך" }, fmtDate(u.date), onClick = { onOpen(u) })
         })
-        group("מסמכים והפניות", Ic.DOC, docs.map { d -> Line(d.title, listOfNotNull(fmtDate(d.date), d.doctor, d.specialty).joinToString(" · ")) })
+        group("מסמכים והפניות", Ic.DOC, docs.map { d ->
+            val fid = fileOf(d)
+            Line(d.title, listOfNotNull(fmtDate(d.date), d.doctor, d.specialty, if (fid != null) "PDF" else null).joinToString(" · "),
+                onClick = fid?.let { { onOpenFile(it, d.title) } })
+        })
         group("א.ק.ג ומכונים", Ic.LAB, exams.map { e -> Line(e.description, listOfNotNull(fmtDate(e.date), e.institute).joinToString(" · ")) })
         group("חיסונים", Ic.CHECK, vaccines.map { v -> Line(v.name, fmtDate(v.date)) })
-        item { Text("פתיחת קובצי PDF תתווסף בגרסה הבאה.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        item { Text("קובצי PDF של מאוחדת נשמרים בסנכרון ונפתחים בלחיצה.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(Space.xl)) }
     }
 }

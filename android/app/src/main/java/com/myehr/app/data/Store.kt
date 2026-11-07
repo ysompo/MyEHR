@@ -173,6 +173,7 @@ class AndroidVault(context: Context) : com.myehr.app.data.FileVault {
     }
 
     override fun delete(id: String) { f(id).delete() }
+    override fun has(id: String) = f(id).exists()
 
     private companion object { const val ALIAS = "myehr_file_key" }
 }
