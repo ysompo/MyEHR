@@ -26,7 +26,7 @@ jobs:
       - name: Unit tests
         run: ./gradlew --no-daemon testDebugUnitTest
 
-      # Release signing: add these repository secrets once (see android/README.md).
+      # Release signing: add these repository secrets once (see docs/DEVELOPER.md).
       # Without them a debug-signed APK is built instead.
       - name: Decode keystore
         env:

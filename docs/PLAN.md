@@ -1,5 +1,7 @@
 # MyEHR for Meuhedet: plan (Android only, draft)
 
+> Original plan, kept for history. What was actually built is in [DEVELOPER.md](DEVELOPER.md).
+
 ## Goal
 A personal medical file for me and my family, pulled from our Meuhedet accounts.
 Data stays **only on the phone**. There is no server, no tracking and no ads.
