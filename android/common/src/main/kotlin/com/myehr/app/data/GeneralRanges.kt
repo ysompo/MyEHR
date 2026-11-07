@@ -5,7 +5,9 @@ import java.time.Period
 
 /** A published source for a general range, shown in the app with its PubMed link. */
 data class RangeSource(val title: String, val pmid: String) {
-    val url get() = "https://pubmed.ncbi.nlm.nih.gov/$pmid/"
+    val url get() = if (pmid.isEmpty()) "" else "https://pubmed.ncbi.nlm.nih.gov/$pmid/"
+    /** Set by the user, not taken from a publication. */
+    val userDefined get() = pmid.isEmpty()
 }
 
 object Sources {
@@ -17,6 +19,7 @@ object Sources {
     val ACG_ALT = RangeSource("ACG liver chemistries guideline, Am J Gastroenterol 2017", "27995906")
     val SAFETY_ALT = RangeSource("SAFETY study (children), Gastroenterology 2010", "20064512")
     val NHANES_TSH = RangeSource("NHANES III thyroid reference, JCEM 2002", "11836274")
+    val USER = RangeSource("טווח שהגדרתם", "")
     val KDIGO = RangeSource("KDIGO 2024 chronic kidney disease guideline, Kidney Int", "38490803")
 }
 
@@ -85,6 +88,16 @@ private val TESTS = listOf(
     // TSH (mIU/L = µIU/mL), age 12+: 2.5th–97.5th percentile of the NHANES III reference population.
     Test(setOf("miu/l", "uiu/ml", "mu/l", "miu/ml"), { n -> tokens(n).any { it == "tsh" } || "תירוטרופין" in flat(n) }, listOf(
         Band(null, 12.0, 200.0, 0.45, 4.12, Sources.NHANES_TSH),
+    )),
+    // Set by the user (no publication): B12, white cells, creatinine (women 18+).
+    Test(setOf("pg/ml"), { n -> flat(n).let { "b12" in it || "cobalamin" in it } }, listOf(
+        Band(null, 0.0, 200.0, 180.0, 650.0, Sources.USER),
+    )),
+    Test(emptySet(), { n -> tokens(n).any { it == "wbc" } || flat(n).let { "leukocyt" in it || "leucocyt" in it || "whitebloodcell" in it || "לויקוציט" in it || "כדוריותלבנות" in it } }, listOf(
+        Band(null, 0.0, 200.0, 3.0, 10.0, Sources.USER),
+    ), unitOk = { u -> u.contains("10^3/ul") || u.contains("10*3/ul") || u.contains("10e3/ul") || u.contains("10^9/l") || u.contains("10*9/l") || u.contains("10e9/l") || u == "k/ul" || u == "thou/ul" || u == "x1000/ul" }),
+    Test(setOf("mg/dl"), { n -> flat(n).let { ("creatinin" in it || "קריאטינין" in it) && listOf("clearance", "ratio", "kinase", "cpk").none { x -> x in it } } && !isUrine(n) }, listOf(
+        Band(Sex.F, 18.0, 200.0, 0.40, 0.88, Sources.USER),
     )),
     // eGFR (mL/min/1.73m²), adults: below 60 is the KDIGO threshold for chronic kidney disease (G3a–G5).
     Test(emptySet(), { n -> flat(n).let { "egfr" in it || ("gfr" in it && "מחושב" in it) } }, listOf(

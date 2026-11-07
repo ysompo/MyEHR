@@ -154,7 +154,7 @@ fun LabSeriesScreen(series: LabSeries?, meds: List<com.myehr.app.ai.MedSummary> 
                 if (norm != null) Text("הרצועה הירוקה: ${norm.rangeLabel} ${valueUnit(range(norm.normLow, norm.normHigh), series.unit)}",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = Space.l, end = Space.l, bottom = if (norm?.generalRange == null) Space.l else 0.dp))
-                norm?.generalRange?.let { src ->
+                norm?.generalRange?.takeIf { !it.userDefined }?.let { src ->
                     val uri = androidx.compose.ui.platform.LocalUriHandler.current
                     androidx.compose.material3.TextButton(onClick = { runCatching { uri.openUri(src.url) } }, modifier = Modifier.padding(start = Space.s)) {
                         Text("מקור: ${src.title} (PubMed)", style = MaterialTheme.typography.bodySmall)
