@@ -45,6 +45,25 @@ class ParsersTest {
         assertEquals("\u2066≥ 40\u2069", range(40.0, null))
     }
 
+    @Test fun generalRangeWhenLabGivesNone() {
+        val hdl = Parsers.labSeries("8", """{"TestDesc":"HDL-CHOLEST.","Items":[
+            {"TestDate":"2026-10-28T00:00:00","Result":"44","TestValue":44,"MeasureUnit":"MG/DL","NormFrom":"0","NormTo":"0"}]}""")!!
+        val man = demographics(Parsers.parse("""{"Gender":"M","BirthDate":"1980-01-01T00:00:00"}"""))
+        val woman = demographics(Parsers.parse("""{"Gender":"F","BirthDate":"1980-01-01T00:00:00"}"""))
+        val child = demographics(Parsers.parse("""{"Gender":"F","BirthDate":"2016-01-01T00:00:00"}"""))
+        GeneralRanges.apply(hdl, man).points.single().let { assertEquals(40.0, it.normLow!!, 0.0); assertFalse(it.outOfRange); assertEquals("טווח כללי", it.rangeLabel) }
+        assertTrue(GeneralRanges.apply(hdl, woman).points.single().outOfRange)
+        assertEquals(45.0, GeneralRanges.apply(hdl, child).points.single().normLow!!, 0.0)
+        // Unknown sex: no sex-specific band, so no range rather than a guess.
+        assertNull(GeneralRanges.apply(hdl, Demographics(null, null, 45.0)).points.single().normLow)
+        // Other unit: no range.
+        assertNull(GeneralRanges.find("HDL", "mmol/L", man, "2026-10-28"))
+        assertNull(GeneralRanges.find("LDL/HDL RATIO", "mg/dL", man, "2026-10-28"))
+        assertEquals(5.6, GeneralRanges.find("HEMOGLOBIN A1C", "%", man, "2026-10-28")!!.high!!, 0.0)
+        assertEquals(13.0, GeneralRanges.find("HEMOGLOBIN", "g/dL", man, "2026-10-28")!!.low!!, 0.0)
+        assertNull(GeneralRanges.find("GLUCOSE - URINE", "mg/dL", man, "2026-10-28"))
+    }
+
     @Test fun labSeriesCautions() {
         val s = Parsers.labSeries("7", """{"TestDesc":"TEST B","Items":[
             {"TestDate":"2020-01-01T00:00:00","Result":"NEGATIVE","TestValue":0,"MeasureUnit":"mg/dL","NormFrom":"1","NormTo":"5"},

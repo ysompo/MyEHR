@@ -21,8 +21,11 @@ class Repo(private val store: RecordStore) {
     fun labDetail(p: String, stickerId: String) = Parsers.labDetail(store.get(p, Kind.LAB_DETAIL, stickerId))
     /** Meuhedet's lab series with values from uploaded documents merged in (Meuhedet wins on the same day). */
     fun labSeries(p: String): List<LabSeries> =
-        mergeUploads(store.all(p, Kind.LAB_HISTORY).mapNotNull { (code, json) -> Parsers.labSeries(code, json)?.let { fillRanges(p, it) } }, uploads(p))
-            .sortedBy { it.name }
+        demographics(memberJson(p)).let { who ->
+            mergeUploads(store.all(p, Kind.LAB_HISTORY).mapNotNull { (code, json) -> Parsers.labSeries(code, json)?.let { GeneralRanges.apply(fillRanges(p, it), who) } }, uploads(p))
+                .map { GeneralRanges.apply(it, who) }
+                .sortedBy { it.name }
+        }
 
     /** History answers sometimes lack the normal range; the result's own page usually has it. */
     private fun fillRanges(p: String, s: LabSeries): LabSeries {

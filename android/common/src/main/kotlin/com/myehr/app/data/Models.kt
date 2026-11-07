@@ -50,7 +50,11 @@ data class LabPoint(
     val stickerId: String?,
     /** null = from Meuhedet; otherwise where an uploaded document came from (e.g. "Hospital X"). */
     val source: String? = null,
+    /** Set when Meuhedet gave no range and a published general range is used instead. */
+    val generalRange: RangeSource? = null,
 ) {
+    /** "טווח תקין" (the lab's) or "טווח כללי" (published, not the lab's). */
+    val rangeLabel: String get() = if (generalRange != null) "טווח כללי" else "טווח תקין"
     val outOfRange: Boolean
         get() = value != null && ((normLow != null && value < normLow) || (normHigh != null && value > normHigh))
 }
@@ -71,6 +75,7 @@ data class LabSeries(
         if (units.size > 1) add("יחידת המדידה השתנתה (${units.joinToString(" / ")}). השוואה בין התקופות עלולה להטעות.")
         val ranges = points.filter { it.normLow != null || it.normHigh != null }.map { it.normLow to it.normHigh }.distinct()
         if (ranges.size > 1) add("הטווח התקין השתנה לאורך השנים. כל תוצאה נבדקת מול הטווח שלה; הרצועה מציגה את האחרון.")
+        points.mapNotNull { it.generalRange }.distinct().forEach { add("מאוחדת לא שלחה טווח. מוצג טווח כללי שפורסם (${it.title}), לא של המעבדה.") }
         if (points.any { it.source != null }) add("חלק מהתוצאות ממסמכים שהעליתם ממעבדות אחרות. שיטות מדידה שונות יכולות לתת ערכים שונים.")
     }
 }

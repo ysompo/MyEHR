@@ -132,7 +132,7 @@ fun Dashboard(
                             }
                             Gap(Space.s)
                             ValueText(last?.resultText ?: "", s.unit, last?.status() ?: Status.NONE, big = true)
-                            if (last?.normLow != null || last?.normHigh != null) Text("טווח תקין ${com.myehr.app.data.range(last.normLow, last.normHigh)}",
+                            if (last?.normLow != null || last?.normHigh != null) Text("${last.rangeLabel} ${com.myehr.app.data.range(last.normLow, last.normHigh)}",
                                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(fmtDate(last?.date), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Gap(Space.m)
@@ -152,7 +152,7 @@ fun Dashboard(
                     CardRow(
                         title = s.name,
                         subtitle = listOfNotNull(fmtDate(last?.date),
-                            if (last?.normLow != null || last?.normHigh != null) "טווח תקין ${com.myehr.app.data.range(last.normLow, last.normHigh)}" else null,
+                            if (last?.normLow != null || last?.normHigh != null) "${last.rangeLabel} ${com.myehr.app.data.range(last.normLow, last.normHigh)}" else null,
                         ).joinToString(" · "),
                         onClick = { onSeries(s.code) },
                         trailing = {

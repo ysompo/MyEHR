@@ -88,6 +88,7 @@ object Exporter {
                                     put("date", pt.date?.take(10)); put("value", pt.value); put("result_text", pt.resultText)
                                     put("unit", pt.unit); put("norm_low", pt.normLow); put("norm_high", pt.normHigh)
                                     put("out_of_range", pt.outOfRange); put("source", pt.source ?: "Meuhedet")
+                                    pt.generalRange?.let { g -> put("range_source", "general published range, not the lab's: ${g.title} ${g.url}") }
                                 })
                             }
                         })
@@ -193,7 +194,7 @@ object Exporter {
         repo.labSeries(p).sortedBy { it.name }.forEach { s ->
             val l = s.latest ?: return@forEach
             val flag = if (l.outOfRange) " ⚠" else ""
-            appendLine("| ${s.name} | ${l.resultText ?: l.value ?: ""} ${l.unit ?: ""}$flag | ${l.normLow ?: ""}–${l.normHigh ?: ""} | ${l.date?.take(10) ?: ""} | ${l.source ?: "Meuhedet"} |")
+            appendLine("| ${s.name} | ${l.resultText ?: l.value ?: ""} ${l.unit ?: ""}$flag | ${l.normLow ?: ""}–${l.normHigh ?: ""}${if (l.generalRange != null) " (general, not the lab's)" else ""} | ${l.date?.take(10) ?: ""} | ${l.source ?: "Meuhedet"} |")
         }
     }
 

@@ -57,6 +57,22 @@ Ask in Hebrew or English, for example "how did my cholesterol change since I sta
 - Tap **"מה נשלח ל-Claude?"** under an answer to see exactly what was sent.
 - Answers describe trends and timing. They are not medical advice.
 
+## 4a. "טווח כללי" (general range)
+When Meuhedet sends no normal range for a result, the app shows a published general range instead, labeled **טווח כללי**
+(not the lab's), chosen by sex and age at the time of the test. It is used only for these tests, and only in these units:
+
+| Test | Unit | Source |
+|---|---|---|
+| Total cholesterol, LDL, HDL, triglycerides (adults) | mg/dL | NCEP ATP III, JAMA 2001: [PubMed 11368702](https://pubmed.ncbi.nlm.nih.gov/11368702/) |
+| Same (under 18) | mg/dL | NHLBI Expert Panel, Pediatrics 2011: [PubMed 22084329](https://pubmed.ncbi.nlm.nih.gov/22084329/) |
+| Fasting glucose, HbA1c | mg/dL, % | ADA Standards of Care 2025: [PubMed 39651986](https://pubmed.ncbi.nlm.nih.gov/39651986/) |
+| Vitamin D (25-OH), deficiency below 20 | ng/mL | Endocrine Society 2011: [PubMed 21646368](https://pubmed.ncbi.nlm.nih.gov/21646368/) |
+| Hemoglobin (lower limit, by age and sex) | g/dL | WHO 2024 cutoffs, summary: [PubMed 38910369](https://pubmed.ncbi.nlm.nih.gov/38910369/) |
+| ALT (adults) | U/L | ACG guideline 2017: [PubMed 27995906](https://pubmed.ncbi.nlm.nih.gov/27995906/) |
+| ALT (under 18) | U/L | SAFETY study 2010: [PubMed 20064512](https://pubmed.ncbi.nlm.nih.gov/20064512/) |
+
+If sex or age is unknown, or the unit differs, no general range is shown.
+
 ## 5a. Add a document from a private doctor or hospital
 1. **Documents** tab → **הוספת מסמך** (add document).
 2. Take a photo of each page (phone) or choose a PDF or picture file.

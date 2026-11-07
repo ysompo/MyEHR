@@ -132,6 +132,7 @@ class AiTools(private val data: AiData) {
                         put("norm_high", p.normHigh)
                         put("out_of_range", p.outOfRange)
                         put("source", if (p.source == null) "Meuhedet" else "uploaded document")
+                        if (p.generalRange != null) put("range_note", "lab gave no range; this is a published general range (${p.generalRange.title}), not the lab's")
                     })
                 }
             })
