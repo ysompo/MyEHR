@@ -79,7 +79,7 @@ Ranges you set (shown as **טווח שהגדרתם**, not from a publication):
 |---|---|---|
 | Vitamin B12 | 180–650 pg/mL | everyone |
 | White cells (WBC) | 3.0–10.0 ×10³/µL | everyone |
-| Creatinine | 0.40–0.88 mg/dL | women 18+ |
+| Creatinine | 0.40–0.88 mg/dL | adults (18+) |
 
 Not covered: ferritin and platelets (no general published range found on PubMed that fits).
 

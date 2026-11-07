@@ -69,7 +69,8 @@ class ParsersTest {
         assertEquals(10.0, GeneralRanges.find("WBC", "10^3/µL", man, "2026-10-28")!!.high!!, 0.0)
         assertNull(GeneralRanges.find("WBC", "/µL", man, "2026-10-28"))
         assertEquals(0.88, GeneralRanges.find("CREATININE", "mg/dL", woman, "2026-10-28")!!.high!!, 0.0)
-        assertNull(GeneralRanges.find("CREATININE", "mg/dL", man, "2026-10-28"))
+        assertEquals(0.40, GeneralRanges.find("CREATININE", "mg/dL", man, "2026-10-28")!!.low!!, 0.0)
+        assertNull(GeneralRanges.find("CREATININE", "mg/dL", child, "2026-10-28"))
         assertNull(GeneralRanges.find("CREATININE - URINE", "mg/dL", woman, "2026-10-28"))
         assertTrue(GeneralRanges.find("VITAMIN B12", "pg/mL", man, "2026-10-28")!!.source.userDefined)
     }

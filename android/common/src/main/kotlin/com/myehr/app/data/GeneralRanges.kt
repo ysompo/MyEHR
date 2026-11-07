@@ -89,7 +89,7 @@ private val TESTS = listOf(
     Test(setOf("miu/l", "uiu/ml", "mu/l", "miu/ml"), { n -> tokens(n).any { it == "tsh" } || "תירוטרופין" in flat(n) }, listOf(
         Band(null, 12.0, 200.0, 0.45, 4.12, Sources.NHANES_TSH),
     )),
-    // Set by the user (no publication): B12, white cells, creatinine (women 18+).
+    // Set by the user (no publication): B12, white cells, creatinine (adults).
     Test(setOf("pg/ml"), { n -> flat(n).let { "b12" in it || "cobalamin" in it } }, listOf(
         Band(null, 0.0, 200.0, 180.0, 650.0, Sources.USER),
     )),
@@ -97,7 +97,7 @@ private val TESTS = listOf(
         Band(null, 0.0, 200.0, 3.0, 10.0, Sources.USER),
     ), unitOk = { u -> u.contains("10^3/ul") || u.contains("10*3/ul") || u.contains("10e3/ul") || u.contains("10^9/l") || u.contains("10*9/l") || u.contains("10e9/l") || u == "k/ul" || u == "thou/ul" || u == "x1000/ul" }),
     Test(setOf("mg/dl"), { n -> flat(n).let { ("creatinin" in it || "קריאטינין" in it) && listOf("clearance", "ratio", "kinase", "cpk").none { x -> x in it } } && !isUrine(n) }, listOf(
-        Band(Sex.F, 18.0, 200.0, 0.40, 0.88, Sources.USER),
+        Band(null, 18.0, 200.0, 0.40, 0.88, Sources.USER),
     )),
     // eGFR (mL/min/1.73m²), adults: below 60 is the KDIGO threshold for chronic kidney disease (G3a–G5).
     Test(emptySet(), { n -> flat(n).let { "egfr" in it || ("gfr" in it && "מחושב" in it) } }, listOf(
