@@ -2,7 +2,7 @@ name: Desktop installers
 
 on:
   push:
-    branches: ["**"]
+    branches: ["main"]
     paths: ["android/common/**", "android/desktop/**", "android/*.kts", ".github/workflows/desktop.yml"]
   workflow_dispatch:
 
